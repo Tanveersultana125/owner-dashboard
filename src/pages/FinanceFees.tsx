@@ -8,12 +8,25 @@ export default function FinanceFees() {
   const [tab, setTab] = useState<"overview" | "defaulters">("overview");
 
   return (
-    <div>
-      <PageHeader title="Finance & Fees" subtitle="Revenue tracking & fee collection analytics" />
+    <div className="space-y-6 lg:space-y-10 max-w-[1600px] mx-auto animate-in fade-in duration-500">
+      <div className="flex flex-col gap-1 lg:gap-2">
+        <h1 className="text-2xl lg:text-3xl font-black text-[#1e293b] tracking-tight">Finance & Fees</h1>
+        <p className="text-slate-400 font-medium text-xs lg:text-sm">Comprehensive revenue tracking & fee collection analytics</p>
+      </div>
 
-      <div className="flex gap-2 mb-6">
-        <button onClick={() => setTab("overview")} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === "overview" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-muted"}`}>Overview</button>
-        <button onClick={() => setTab("defaulters")} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === "defaulters" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-muted"}`}>Defaulters</button>
+      <div className="flex gap-2 lg:gap-4 p-1 lg:p-1.5 bg-slate-100 rounded-2xl w-fit">
+        <button 
+          onClick={() => setTab("overview")} 
+          className={`px-6 lg:px-10 py-2.5 lg:py-3 rounded-xl text-[10px] lg:text-sm font-black transition-all uppercase tracking-widest ${tab === "overview" ? "bg-white text-[#1e3a8a] shadow-sm" : "text-slate-500 hover:text-slate-700 hover:bg-white/50"}`}
+        >
+          Overview
+        </button>
+        <button 
+          onClick={() => setTab("defaulters")} 
+          className={`px-6 lg:px-10 py-2.5 lg:py-3 rounded-xl text-[10px] lg:text-sm font-black transition-all uppercase tracking-widest ${tab === "defaulters" ? "bg-white text-[#1e3a8a] shadow-sm" : "text-slate-500 hover:text-slate-700 hover:bg-white/50"}`}
+        >
+          Defaulters
+        </button>
       </div>
 
       {tab === "overview" ? <OverviewTab /> : <DefaultersTab />}
@@ -23,54 +36,76 @@ export default function FinanceFees() {
 
 function OverviewTab() {
   return (
-    <>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard title="Total Revenue" value={financeStats.totalRevenue.value} change={financeStats.totalRevenue.change} icon={<DollarSign className="w-5 h-5 text-success" />} />
-        <StatCard title="Collection Rate" value={financeStats.collectionRate.value} change={financeStats.collectionRate.change} icon={<Percent className="w-5 h-5 text-success" />} />
-        <StatCard title="Outstanding" value={financeStats.outstanding.value} change={financeStats.outstanding.change} icon={<AlertTriangle className="w-5 h-5 text-warning" />} changeColor="warning" />
-        <StatCard title="Defaulters" value={financeStats.defaulters.value} change={financeStats.defaulters.change} icon={<Users className="w-5 h-5 text-destructive" />} changeColor="destructive" />
+    <div className="space-y-8 lg:space-y-12">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-8">
+        <div className="bg-white p-6 lg:p-8 rounded-[24px] border border-slate-100 shadow-sm">
+          <p className="text-slate-400 text-[10px] lg:text-[11px] font-black uppercase tracking-widest">Total Revenue</p>
+          <h2 className="text-2xl lg:text-4xl font-black mt-2 lg:mt-3 text-[#1e293b]">{financeStats.totalRevenue.value}</h2>
+          <p className="text-green-600 text-[11px] lg:text-[12px] font-bold mt-1 lg:mt-2">↑ {financeStats.totalRevenue.change}</p>
+        </div>
+        <div className="bg-white p-6 lg:p-8 rounded-[24px] border border-slate-100 shadow-sm">
+          <p className="text-slate-400 text-[10px] lg:text-[11px] font-black uppercase tracking-widest">Collection Rate</p>
+          <h2 className="text-2xl lg:text-4xl font-black mt-2 lg:mt-3 text-[#1e293b]">{financeStats.collectionRate.value}</h2>
+          <p className="text-green-600 text-[11px] lg:text-[12px] font-bold mt-1 lg:mt-2">↑ {financeStats.collectionRate.change}</p>
+        </div>
+        <div className="bg-white p-6 lg:p-8 rounded-[24px] border border-slate-100 shadow-sm">
+          <p className="text-slate-400 text-[10px] lg:text-[11px] font-black uppercase tracking-widest">Outstanding</p>
+          <h2 className="text-2xl lg:text-4xl font-black mt-2 lg:mt-3 text-[#1e293b]">{financeStats.outstanding.value}</h2>
+          <p className="text-orange-600 text-[11px] lg:text-[12px] font-bold mt-1 lg:mt-2">{financeStats.outstanding.change}</p>
+        </div>
+        <div className="bg-white p-6 lg:p-8 rounded-[24px] border border-slate-100 shadow-sm">
+          <p className="text-slate-400 text-[10px] lg:text-[11px] font-black uppercase tracking-widest">Defaulters</p>
+          <h2 className="text-2xl lg:text-4xl font-black mt-2 lg:mt-3 text-[#1e293b]">{financeStats.defaulters.value}</h2>
+          <p className="text-red-600 text-[11px] lg:text-[12px] font-bold mt-1 lg:mt-2">{financeStats.defaulters.change}</p>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-        <div className="bg-card rounded-lg border border-border p-5">
-          <h3 className="font-semibold text-foreground mb-4">Branch-wise Revenue</h3>
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={branchRevenue} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis type="number" stroke="hsl(var(--muted-foreground))" tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v}K`} />
-              <YAxis type="category" dataKey="branch" stroke="hsl(var(--muted-foreground))" tick={{ fontSize: 12 }} width={50} />
-              <Tooltip formatter={(v: number) => [`$${v}K`, "Revenue"]} />
-              <Bar dataKey="revenue" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-10">
+        <div className="bg-white p-6 lg:p-8 rounded-[32px] border border-slate-100 shadow-sm">
+          <h3 className="text-sm lg:text-base font-black text-[#1e293b] mb-8 uppercase tracking-widest text-center sm:text-left">Branch Revenue</h3>
+          <div className="h-[220px] lg:h-[250px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={branchRevenue} layout="vertical" margin={{ left: -10, right: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis type="number" hide />
+                <YAxis type="category" dataKey="branch" stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} width={60} />
+                <Tooltip cursor={{ fill: '#f8fafc' }} />
+                <Bar dataKey="revenue" fill="#1e3a8a" radius={[0, 4, 4, 0]} barSize={16} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
-        <div className="bg-card rounded-lg border border-border p-5">
-          <h3 className="font-semibold text-foreground mb-4">Monthly Collection Trend</h3>
-          <ResponsiveContainer width="100%" height={220}>
-            <LineChart data={monthlyCollection}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" tick={{ fontSize: 12 }} />
-              <YAxis stroke="hsl(var(--muted-foreground))" tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v}K`} />
-              <Tooltip formatter={(v: number) => [`$${v}K`, "Collection"]} />
-              <Line type="monotone" dataKey="amount" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ fill: "hsl(var(--primary))" }} />
-            </LineChart>
-          </ResponsiveContainer>
+        <div className="bg-white p-6 lg:p-8 rounded-[32px] border border-slate-100 shadow-sm">
+          <h3 className="text-sm lg:text-base font-black text-[#1e293b] mb-8 uppercase tracking-widest text-center sm:text-left">Collection Trend</h3>
+          <div className="h-[220px] lg:h-[250px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={monthlyCollection}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="month" stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} />
+                <YAxis hide />
+                <Tooltip />
+                <Line type="step" dataKey="amount" stroke="#1e3a8a" strokeWidth={3} dot={{ r: 4, fill: "#1e3a8a", strokeWidth: 2, stroke: "#fff" }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         </div>
-        <div className="bg-card rounded-lg border border-border p-5">
-          <h3 className="font-semibold text-foreground mb-4">Payment Mode Distribution</h3>
-          <ResponsiveContainer width="100%" height={220}>
-            <PieChart>
-              <Pie data={paymentModes} cx="50%" cy="50%" innerRadius={45} outerRadius={75} dataKey="value" paddingAngle={2}>
-                {paymentModes.map((entry, i) => (
-                  <Cell key={i} fill={entry.fill} />
-                ))}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
-          <div className="flex flex-wrap gap-2 justify-center mt-1">
+        <div className="bg-white p-6 lg:p-8 rounded-[32px] border border-slate-100 shadow-sm">
+          <h3 className="text-sm lg:text-base font-black text-[#1e293b] mb-8 uppercase tracking-widest text-center sm:text-left">Payment Methods</h3>
+          <div className="h-[180px] lg:h-[220px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={paymentModes} cx="50%" cy="50%" innerRadius={50} outerRadius={70} dataKey="value" paddingAngle={5}>
+                  {paymentModes.map((entry, i) => (
+                    <Cell key={i} fill={entry.fill} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="flex flex-wrap gap-x-4 gap-y-2 justify-center mt-6">
             {paymentModes.map((d) => (
-              <span key={d.name} className="flex items-center gap-1 text-xs text-muted-foreground">
+              <span key={d.name} className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
                 <span className="w-2 h-2 rounded-full" style={{ backgroundColor: d.fill }} />
                 {d.name}
               </span>
@@ -79,28 +114,33 @@ function OverviewTab() {
         </div>
       </div>
 
-      <div className="bg-card rounded-lg border border-border p-5">
-        <h3 className="font-semibold text-foreground mb-4">Recent Transactions</h3>
+      <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden">
+        <div className="p-6 lg:p-10 border-b border-slate-50 flex items-center justify-between bg-[#f8fafc]/50">
+          <h3 className="text-sm lg:text-base font-black text-[#1e293b] uppercase tracking-widest">Real-time Transactions</h3>
+          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+        </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[900px]">
             <thead>
-              <tr className="border-b border-border">
-                {["Date", "Student", "Branch", "Amount", "Mode", "Status"].map((h) => (
-                  <th key={h} className="text-left py-3 px-4 text-muted-foreground font-medium">{h}</th>
+              <tr className="border-b border-slate-50 bg-[#f8fafc]/30">
+                {["Timestamp", "Student Profile", "Branch", "Amount", "Mode", "Verification"].map((h) => (
+                  <th key={h} className="py-6 px-8 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-slate-50">
               {recentTransactions.map((t, i) => (
-                <tr key={i} className="border-b border-border hover:bg-muted/50">
-                  <td className="py-3 px-4 text-foreground">{t.date}</td>
-                  <td className="py-3 px-4 text-foreground">{t.student}</td>
-                  <td className="py-3 px-4 text-foreground">{t.branch}</td>
-                  <td className="py-3 px-4 font-medium text-foreground">{t.amount}</td>
-                  <td className="py-3 px-4 text-foreground">{t.mode}</td>
-                  <td className="py-3 px-4">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      t.status === "Paid" ? "bg-success/10 text-success" : "bg-warning/10 text-warning"
+                <tr key={i} className="hover:bg-slate-50/80 transition-all cursor-default group">
+                  <td className="py-5 px-8 text-slate-500 font-bold text-xs">{t.date}</td>
+                  <td className="py-5 px-8">
+                    <p className="font-black text-[#1e293b] text-sm group-hover:text-[#1e3a8a] transition-colors">{t.student}</p>
+                  </td>
+                  <td className="py-5 px-8 text-slate-500 font-bold text-xs uppercase">{t.branch}</td>
+                  <td className="py-5 px-8 font-black text-[#1e293b] text-sm">{t.amount}</td>
+                  <td className="py-5 px-8 text-slate-400 font-black text-[10px] uppercase tracking-widest">{t.mode}</td>
+                  <td className="py-5 px-8 text-left">
+                    <span className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest ${
+                      t.status === "Paid" ? "bg-green-50 text-green-600" : "bg-orange-50 text-orange-600"
                     }`}>{t.status}</span>
                   </td>
                 </tr>
@@ -108,49 +148,64 @@ function OverviewTab() {
             </tbody>
           </table>
         </div>
+        <div className="p-6 lg:p-8 bg-[#f8fafc]/30 text-center">
+          <button className="text-[10px] font-black uppercase tracking-widest text-[#1e3a8a] hover:underline underline-offset-4">Download Ledger Statement (PDF)</button>
+        </div>
       </div>
-    </>
+    </div>
   );
 }
 
 function DefaultersTab() {
   return (
-    <>
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-        <StatCard title="Total Defaulters" value={defaulterStats.totalDefaulters.value} />
-        <StatCard title="Critical (>60 days)" value={defaulterStats.critical.value} changeColor="destructive" />
-        <StatCard title="Reminder Sent" value={defaulterStats.reminderSent.value} />
-        <StatCard title="Outstanding" value={defaulterStats.outstanding.value} changeColor="warning" />
-        <StatCard title="At Risk" value={defaulterStats.atRisk.value} changeColor="destructive" />
-        <StatCard title="Pending" value={defaulterStats.pending.value} />
+    <div className="space-y-8 lg:space-y-12">
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 lg:gap-6">
+        {[
+          { label: "Defaulters", value: defaulterStats.totalDefaulters.value, color: "text-[#1e293b]" },
+          { label: "Critical (>60d)", value: defaulterStats.critical.value, color: "text-red-600" },
+          { label: "Notified", value: defaulterStats.reminderSent.value, color: "text-blue-600" },
+          { label: "Arrears", value: defaulterStats.outstanding.value, color: "text-orange-600" },
+          { label: "At Risk", value: defaulterStats.atRisk.value, color: "text-red-600" },
+          { label: "Resolution", value: defaulterStats.pending.value, color: "text-slate-500" },
+        ].map((stat, i) => (
+          <div key={i} className="bg-white p-5 lg:p-6 rounded-[24px] border border-slate-100 shadow-sm text-center">
+            <p className="text-slate-400 text-[9px] lg:text-[10px] font-black uppercase tracking-widest mb-2">{stat.label}</p>
+            <h2 className={`${stat.color} text-xl lg:text-2xl font-black`}>{stat.value}</h2>
+          </div>
+        ))}
       </div>
 
-      <div className="bg-card rounded-lg border border-border p-5">
-        <h3 className="font-semibold text-foreground mb-4">Defaulters List</h3>
+      <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden">
+        <div className="p-6 lg:p-8 border-b border-slate-50 flex items-center justify-between bg-[#f8fafc]/50">
+          <h3 className="text-sm lg:text-base font-black text-[#1e293b] uppercase tracking-widest">Defaulter Registry</h3>
+          <button className="bg-red-600 text-white text-[10px] font-black px-6 h-10 rounded-xl uppercase tracking-widest shadow-lg shadow-red-900/10 hover:bg-red-700 transition-all">Bulk Notify</button>
+        </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[1000px]">
             <thead>
-              <tr className="border-b border-border">
-                {["Student", "Branch", "Amount Due", "Days Overdue", "Last Reminder", "Status", "Actions"].map((h) => (
-                  <th key={h} className="text-left py-3 px-4 text-muted-foreground font-medium">{h}</th>
+              <tr className="border-b border-slate-50 bg-[#f8fafc]/30">
+                {["Student", "Branch", "Balance Due", "Aging", "Last Action", "Risk Profile", "Execute"].map((h) => (
+                  <th key={h} className="py-6 px-8 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-slate-50">
               {defaultersList.map((d, i) => (
-                <tr key={i} className="border-b border-border hover:bg-muted/50">
-                  <td className="py-3 px-4 font-medium text-foreground">{d.name}</td>
-                  <td className="py-3 px-4 text-foreground">{d.branch}</td>
-                  <td className="py-3 px-4 font-medium text-foreground">{d.amountDue}</td>
-                  <td className="py-3 px-4 text-foreground">{d.daysOverdue} days</td>
-                  <td className="py-3 px-4 text-foreground">{d.lastReminder}</td>
-                  <td className="py-3 px-4">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      d.status === "Critical" ? "bg-destructive/10 text-destructive" : "bg-warning/10 text-warning"
+                <tr key={i} className="hover:bg-slate-50/80 transition-all cursor-default group">
+                  <td className="py-5 px-8">
+                    <p className="font-black text-[#1e293b] text-sm group-hover:text-[#1e3a8a] transition-colors">{d.name}</p>
+                  </td>
+                  <td className="py-5 px-8 text-slate-500 font-bold text-xs uppercase">{d.branch}</td>
+                  <td className="py-5 px-8 font-black text-red-600 text-sm">{d.amountDue}</td>
+                  <td className="py-5 px-8 text-slate-900 font-black text-xs">{d.daysOverdue} Days</td>
+                  <td className="py-5 px-8 text-slate-400 font-bold text-xs">{d.lastReminder}</td>
+                  <td className="py-5 px-8">
+                    <span className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest ${
+                      d.status === "Critical" ? "bg-red-50 text-red-600" : "bg-orange-50 text-orange-600"
                     }`}>{d.status}</span>
                   </td>
-                  <td className="py-3 px-4">
-                    <button className="text-primary hover:underline text-sm font-medium">Contact</button>
+                  <td className="py-5 px-8">
+                    <button className="text-[#1e3a8a] font-black text-[10px] uppercase tracking-widest hover:underline underline-offset-4">Dispatch Reminder</button>
                   </td>
                 </tr>
               ))}
@@ -158,6 +213,7 @@ function DefaultersTab() {
           </table>
         </div>
       </div>
-    </>
+    </div>
+
   );
 }

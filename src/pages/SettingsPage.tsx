@@ -5,75 +5,87 @@ export default function SettingsPage() {
   const { profile, notifications, preferences } = settingsData;
 
   return (
-    <div>
-      <PageHeader title="Settings" subtitle="Manage your account and system preferences" />
+    <div className="space-y-10 lg:space-y-16 max-w-[1000px] mx-auto animate-in fade-in duration-700">
+      <div className="flex flex-col gap-1 lg:gap-2">
+        <h1 className="text-2xl lg:text-3xl font-black text-[#1e293b] tracking-tight text-center sm:text-left">System Configuration</h1>
+        <p className="text-slate-400 font-medium text-xs lg:text-sm text-center sm:text-left">Manage identity parameters and neural notification preferences</p>
+      </div>
 
       {/* Profile */}
-      <div className="bg-card rounded-lg border border-border p-6 mb-6">
-        <h3 className="font-semibold text-foreground mb-4">Profile</h3>
-        <div className="flex items-center gap-4 mb-6">
-          <div className="w-16 h-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xl font-bold">{profile.initials}</div>
+      <div className="bg-white rounded-[40px] border border-slate-100 shadow-sm p-8 lg:p-14">
+        <h3 className="text-sm lg:text-base font-black text-[#1e293b] mb-10 uppercase tracking-[0.2em]">Identity Profile</h3>
+        <div className="flex flex-col sm:flex-row items-center gap-8 mb-12 text-center sm:text-left">
+          <div className="w-20 h-20 lg:w-24 lg:h-24 rounded-[32px] lg:rounded-[40px] bg-[#1e294b] text-white flex items-center justify-center text-2xl lg:text-3xl font-black shadow-2xl ring-4 ring-slate-50 ring-offset-4">{profile.initials}</div>
           <div>
-            <h4 className="text-lg font-semibold text-foreground">{profile.name}</h4>
-            <p className="text-sm text-muted-foreground">{profile.email}</p>
+            <h4 className="text-xl lg:text-2xl font-black text-[#1e293b] tracking-tight">{profile.name}</h4>
+            <p className="text-slate-400 text-sm font-bold mt-1">{profile.email}</p>
           </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm text-muted-foreground mb-1">Full Name</label>
-            <input type="text" defaultValue={profile.name} className="w-full px-3 py-2 rounded-lg border border-input bg-background text-foreground text-sm" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="space-y-3">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-2">Full Designation</label>
+            <input type="text" defaultValue={profile.name} className="w-full px-6 py-4 rounded-2xl border border-slate-100 bg-slate-50/50 text-[#1e293b] text-sm font-bold focus:bg-white focus:ring-4 focus:ring-blue-50 transition-all outline-none" />
           </div>
-          <div>
-            <label className="block text-sm text-muted-foreground mb-1">Email</label>
-            <input type="email" defaultValue={profile.email} className="w-full px-3 py-2 rounded-lg border border-input bg-background text-foreground text-sm" />
+          <div className="space-y-3">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-2">Digital Core Email</label>
+            <input type="email" defaultValue={profile.email} className="w-full px-6 py-4 rounded-2xl border border-slate-100 bg-slate-50/50 text-[#1e293b] text-sm font-bold focus:bg-white focus:ring-4 focus:ring-blue-50 transition-all outline-none" />
           </div>
         </div>
       </div>
 
       {/* Notification Preferences */}
-      <div className="bg-card rounded-lg border border-border p-6 mb-6">
-        <h3 className="font-semibold text-foreground mb-4">Notification Preferences</h3>
-        <div className="space-y-4">
+      <div className="bg-white rounded-[40px] border border-slate-100 shadow-sm p-8 lg:p-14">
+        <h3 className="text-sm lg:text-base font-black text-[#1e293b] mb-10 uppercase tracking-[0.2em]">Neural Distribution</h3>
+        <div className="space-y-6">
           {[
-            { label: "Critical Alerts", value: notifications.criticalAlerts },
-            { label: "Daily Summary", value: notifications.dailySummary },
-            { label: "Weekly Reports", value: notifications.weeklyReports },
+            { label: "Critical Anomaly Alerts", value: notifications.criticalAlerts },
+            { label: "Daily Synchronization Summary", value: notifications.dailySummary },
+            { label: "Weekly Kinetic Reports", value: notifications.weeklyReports },
           ].map((n) => (
-            <div key={n.label} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-              <span className="text-sm font-medium text-foreground">{n.label}</span>
-              <span className="text-sm text-muted-foreground">{n.value}</span>
+            <div key={n.label} className="flex items-center justify-between py-6 border-b border-slate-50 last:border-0 group">
+              <span className="text-sm lg:text-base font-black text-[#1e293b] group-hover:text-[#1e3a8a] transition-colors">{n.label}</span>
+              <span className="px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest bg-blue-50 text-[#1e3a8a]">{n.value}</span>
             </div>
           ))}
-          <div className="flex items-center justify-between py-2">
+          <div className="flex items-center justify-between py-6 group">
             <div>
-              <span className="text-sm font-medium text-foreground">Marketing Updates</span>
-              <p className="text-xs text-muted-foreground">Product news & features</p>
+              <span className="text-sm lg:text-base font-black text-[#1e293b] group-hover:text-[#1e3a8a] transition-colors">Marketing Signal Updates</span>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight mt-1">Product roadmap & architectural expansions</p>
             </div>
-            <div className={`w-10 h-6 rounded-full relative cursor-pointer transition-colors ${notifications.marketingUpdates ? "bg-primary" : "bg-muted"}`}>
-              <div className={`w-4 h-4 rounded-full bg-primary-foreground absolute top-1 transition-transform ${notifications.marketingUpdates ? "translate-x-5" : "translate-x-1"}`} />
+            <div className={`w-14 h-8 rounded-2xl relative cursor-pointer transition-all duration-500 ${notifications.marketingUpdates ? "bg-[#1e3a8a] shadow-lg shadow-blue-900/20" : "bg-slate-200"}`}>
+              <div className={`w-6 h-6 rounded-xl bg-white absolute top-1 transition-all duration-500 shadow-sm ${notifications.marketingUpdates ? "translate-x-7" : "translate-x-1"}`} />
             </div>
           </div>
         </div>
       </div>
 
       {/* System Preferences */}
-      <div className="bg-card rounded-lg border border-border p-6">
-        <h3 className="font-semibold text-foreground mb-4">System Preferences</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="bg-white rounded-[40px] border border-slate-100 shadow-sm p-8 lg:p-14">
+        <h3 className="text-sm lg:text-base font-black text-[#1e293b] mb-10 uppercase tracking-[0.2em]">Core Protocol Prefs</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
           {[
-            { label: "Default Time Zone", value: preferences.timezone },
-            { label: "Date Format", value: preferences.dateFormat },
-            { label: "Currency", value: preferences.currency },
-            { label: "Language", value: preferences.language },
+            { label: "Temporal Zone Cluster", value: preferences.timezone },
+            { label: "Chronological Format", value: preferences.dateFormat },
+            { label: "Monetary Nexus", value: preferences.currency },
+            { label: "Linguistic Interface", value: preferences.language },
           ].map((p) => (
-            <div key={p.label}>
-              <label className="block text-sm text-muted-foreground mb-1">{p.label}</label>
-              <select className="w-full px-3 py-2 rounded-lg border border-input bg-background text-foreground text-sm">
-                <option>{p.value}</option>
-              </select>
+            <div key={p.label} className="space-y-4">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-2">{p.label}</label>
+              <div className="relative group">
+                  <select className="w-full px-6 py-4 rounded-2xl border border-slate-100 bg-slate-50/50 text-[#1e293b] text-sm font-bold appearance-none focus:bg-white focus:ring-4 focus:ring-blue-50 transition-all outline-none">
+                    <option>{p.value}</option>
+                  </select>
+                  <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-slate-300 group-hover:text-[#1e3a8a] transition-colors">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7"></path></svg>
+                  </div>
+              </div>
             </div>
           ))}
         </div>
+      </div>
+      <div className="flex justify-center lg:justify-end gap-6 pt-10">
+          <button className="px-10 py-5 rounded-3xl text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-[#1e3a8a] transition-all">Reject All Changes</button>
+          <button className="px-12 py-5 rounded-3xl bg-[#1e294b] text-white text-[10px] font-black uppercase tracking-[0.2em] shadow-2xl shadow-slate-900/10 hover:bg-[#1e3a8a] transition-all hover:scale-105 active:scale-95">Commit Configurations</button>
       </div>
     </div>
   );

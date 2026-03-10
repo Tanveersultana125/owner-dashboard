@@ -10,21 +10,21 @@ interface StatCardProps {
 
 export function StatCard({ title, value, change, icon, changeColor = "success" }: StatCardProps) {
   const colorMap = {
-    success: "text-success",
-    warning: "text-warning",
-    destructive: "text-destructive font-semibold",
-    muted: "text-muted-foreground",
+    success: "text-green-600",
+    warning: "text-amber-600",
+    destructive: "text-red-600 font-bold",
+    muted: "text-slate-400",
   };
 
   return (
-    <div className="bg-card rounded-lg border border-border p-5">
+    <div className="bg-white rounded-[20px] border border-slate-100 p-5 lg:p-6 shadow-sm hover:shadow-md transition-shadow">
       <div className="flex items-center justify-between mb-3">
-        <span className="text-sm text-muted-foreground">{title}</span>
-        {icon && <span className="text-muted-foreground">{icon}</span>}
+        <span className="text-[10px] lg:text-[11px] text-slate-400 font-black uppercase tracking-widest">{title}</span>
+        {icon && <div className="p-2 bg-slate-50 rounded-lg text-slate-400">{icon}</div>}
       </div>
-      <div className="text-3xl font-bold text-foreground">{value}</div>
+      <div className="text-2xl lg:text-3xl font-black text-[#1e3a8a]">{value}</div>
       {change && (
-        <p className={`text-sm mt-1 ${colorMap[changeColor]}`}>
+        <p className={`text-[10px] lg:text-xs mt-2 font-bold uppercase tracking-wider ${colorMap[changeColor]}`}>
           <span className="mr-1">↑</span>{change}
         </p>
       )}
@@ -39,9 +39,10 @@ interface PageHeaderProps {
 
 export function PageHeader({ title, subtitle }: PageHeaderProps) {
   return (
-    <div className="mb-6">
-      <h1 className="text-2xl font-bold text-foreground">{title}</h1>
-      <p className="text-muted-foreground text-sm mt-1">{subtitle}</p>
+    <div className="mb-6 lg:mb-10">
+      <h1 className="text-2xl lg:text-4xl font-black text-[#1e293b] tracking-tight">{title}</h1>
+      <p className="text-slate-400 font-medium text-xs lg:text-base mt-1">{subtitle}</p>
     </div>
   );
 }
+
