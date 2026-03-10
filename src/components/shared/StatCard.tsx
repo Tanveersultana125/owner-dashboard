@@ -12,7 +12,7 @@ export function StatCard({ title, value, change, icon, changeColor = "success" }
   const colorMap = {
     success: "text-success",
     warning: "text-warning",
-    destructive: "text-destructive",
+    destructive: "text-destructive font-semibold",
     muted: "text-muted-foreground",
   };
 

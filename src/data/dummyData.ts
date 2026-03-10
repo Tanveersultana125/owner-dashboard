@@ -36,9 +36,31 @@ export const criticalAlerts = [
 export const studentStats = {
   totalEnrollment: { value: 4286, change: "+124 this term" },
   averageAttendance: { value: "91.8%", change: "+0.5% vs last month" },
-  atRiskStudents: { value: 186, change: "4.3% of total" },
+  atRiskStudents: { value: 186, change: "4.3% of total", color: "destructive" as const },
   highPerformers: { value: 892, change: "20.8% of total" },
 };
+
+export const enrollmentTrend = [
+  { month: "Aug", value: 3800 },
+  { month: "Sep", value: 4000 },
+  { month: "Oct", value: 4100 },
+  { month: "Nov", value: 4200 },
+  { month: "Dec", value: 4250 },
+  { month: "Jan", value: 4286 },
+];
+
+export const gradeDistribution = [
+  { name: "Grade 6-8", value: 45, fill: "hsl(210, 100%, 50%)" },
+  { name: "Grade 9-10", value: 30, fill: "hsl(220, 70%, 30%)" },
+  { name: "Grade 11-12", value: 20, fill: "hsl(210, 60%, 70%)" },
+  { name: "Other", value: 5, fill: "hsl(210, 40%, 85%)" },
+];
+
+export const performanceByBranch = [
+  { branch: "Main", value: 91, fill: "hsl(142, 71%, 45%)" },
+  { branch: "North", value: 86, fill: "hsl(142, 71%, 45%)" },
+  { branch: "South", value: 78, fill: "hsl(38, 92%, 50%)" },
+];
 
 export const enrollmentByBranch = [
   { branch: "Main", value: 2145 },
@@ -111,6 +133,14 @@ export const topTeachers = [
   { rank: 4, name: "Mr. Robert Wilson", score: 92.1, subject: "History", branch: "South Branch" },
 ];
 
+export const teachersList = [
+  { id: "TCH-2018-0042", name: "Dr. Sarah Johnson", subject: "Mathematics", branch: "Main Campus", effectiveness: 96.2, attendance: 98.5, experience: "12 Years", status: "Excellent" },
+  { id: "TCH-2019-0115", name: "Prof. Michael Chen", subject: "Physics", branch: "North Branch", effectiveness: 94.8, attendance: 97.2, experience: "8 Years", status: "Excellent" },
+  { id: "TCH-2020-0089", name: "Ms. Emily Davis", subject: "English", branch: "Main Campus", effectiveness: 93.5, attendance: 99.0, experience: "5 Years", status: "Good" },
+  { id: "TCH-2017-0234", name: "Mr. Robert Wilson", subject: "History", branch: "South Branch", effectiveness: 92.1, attendance: 94.5, experience: "15 Years", status: "Good" },
+  { id: "TCH-2021-0456", name: "Mrs. Anita Desai", subject: "Biology", branch: "North Branch", effectiveness: 88.4, attendance: 92.0, experience: "6 Years", status: "Average" },
+];
+
 export const performanceVsAttendance = [
   { month: "Aug", performance: 82, attendance: 90 },
   { month: "Sep", performance: 85, attendance: 88 },
@@ -152,6 +182,59 @@ export const academicsStats = {
   averageGPA: { value: 3.42, change: "+0.15 improvement" },
   distinctionRate: { value: "28.6%", change: "+3.2% increase" },
   curriculumCoverage: { value: "87.4%", change: "On track" },
+};
+
+export const subjectsList = [
+  { id: "math", name: "Mathematics", teachers: 24, students: 1847, status: "Strong", avgScore: 87.4, passRate: 96.2 },
+  { id: "science", name: "Science", teachers: 18, students: 1520, status: "Strong", avgScore: 85.1, passRate: 94.5 },
+  { id: "english", name: "English", teachers: 20, students: 1910, status: "Good", avgScore: 82.3, passRate: 92.1 },
+  { id: "history", name: "History", teachers: 12, students: 1200, status: "Average", avgScore: 78.4, passRate: 88.6 },
+];
+
+export const subjectDetailsData = {
+  math: {
+    name: "Mathematics",
+    subtitle: "Subject Performance Analysis",
+    teachers: 24,
+    students: 1847,
+    status: "Strong",
+    metrics: {
+      avgScore: { value: "87.4", note: "+2.1 vs last term" },
+      passRate: { value: "96.2%", note: "+1.4% improvement" },
+      topPerformers: { value: "342", note: "18.5% of students" },
+      focusAreas: { value: "3", note: "Topics identified" },
+    },
+    topics: [
+      { name: "Geo", score: 92, color: "#22c55e" },
+      { name: "Stats", score: 88, color: "#22c55e" },
+      { name: "Trig", score: 74, color: "#f59e0b" },
+      { name: "Calc", score: 71, color: "#f59e0b" },
+      { name: "Alg", score: 62, color: "#ef4444" },
+    ],
+    classComparison: [
+      { grade: "G9-A", main: 83, north: 79, south: 76 },
+      { grade: "G9-B", main: 82, north: 81, south: 75 },
+      { grade: "G10-A", main: 86, north: 80, south: 78 },
+      { grade: "G10-B", main: 85, north: 82, south: 74 },
+      { grade: "G11-A", main: 88, north: 85, south: 81 },
+    ],
+    weakAreas: [
+      {
+        topic: "Advanced Calculus",
+        avgScore: "62/100",
+        affected: "234 students affected",
+        recommendation: "Additional tutoring sessions, visual learning materials",
+        status: "Critical"
+      },
+      {
+        topic: "Trigonometry Applications",
+        avgScore: "74/100",
+        affected: "145 students affected",
+        recommendation: "Increase practice assignments on three-dimensional problems",
+        status: "Moderate"
+      },
+    ]
+  }
 };
 
 export const gradePerformanceMatrix = [
@@ -313,16 +396,118 @@ export const alertDetail = {
 };
 
 // ==================== BRANCHES COMPARISON ====================
-export const branchComparison = [
-  { name: "Main Campus", students: 2145, ahi: 92, feeCollection: 96, passRate: 96, attendance: 94 },
-  { name: "North Branch", students: 1203, ahi: 88, feeCollection: 94, passRate: 93, attendance: 92 },
-  { name: "South Branch", students: 938, ahi: 81, feeCollection: 91, passRate: 90, attendance: 88 },
-];
+export const branchesData = {
+  "Main Campus": {
+    name: "Main Campus",
+    students: 2145,
+    teachers: 112,
+    established: 2012,
+    ahi: 92,
+    feeCollection: 96,
+    passRate: 96,
+    attendance: 94,
+    activeAlerts: 2,
+    color: "#1e3a8a", // Blue
+    status: "Strong",
+    historicalPerformance: [
+      { year: "2021", score: 88, schoolAvg: 80 },
+      { year: "2022", score: 90, schoolAvg: 82 },
+      { year: "2023", score: 91, schoolAvg: 84 },
+      { year: "2024", score: 92, schoolAvg: 86 },
+      { year: "2025", score: 92, schoolAvg: 88 },
+    ],
+    strengths: [
+      "Highest academic average across all grades",
+      "96% fee collection on time",
+      "Advanced research & innovation wing",
+      "National level sports achievements",
+    ],
+    improvements: [
+      "Classroom size optimization needed in G11",
+      "Cafeteria modernization project",
+      "Library digitalization pending",
+    ],
+    actionPlan: [
+      { task: "Expand Chemistry Lab capacity", priority: "Medium", status: "Ongoing" },
+      { task: "Launch Faculty Research Grant", priority: "Low", status: "Planned" },
+    ]
+  },
+  "North Branch": {
+    name: "North Branch",
+    students: 1203,
+    teachers: 68,
+    established: 2016,
+    ahi: 88,
+    feeCollection: 94,
+    passRate: 93,
+    attendance: 92,
+    activeAlerts: 3,
+    color: "#10b981", // Green
+    status: "Good",
+    historicalPerformance: [
+      { year: "2021", score: 80, schoolAvg: 80 },
+      { year: "2022", score: 83, schoolAvg: 82 },
+      { year: "2023", score: 85, schoolAvg: 84 },
+      { year: "2024", score: 87, schoolAvg: 86 },
+      { year: "2025", score: 88, schoolAvg: 88 },
+    ],
+    strengths: [
+      "Excellent performing arts department",
+      "Sustainable campus initiatives",
+      "94% fee collection rate",
+      "Strong community engagement",
+    ],
+    improvements: [
+      "Science lab equipment upgrades",
+      "Teacher-student ratio in G6-G8",
+      "Sports ground drainage system",
+    ],
+    actionPlan: [
+      { task: "Upgrade primary science labs", priority: "High", status: "Ongoing" },
+    ]
+  },
+  "South Branch": {
+    name: "South Branch",
+    students: 938,
+    teachers: 52,
+    established: 2019,
+    ahi: 81,
+    feeCollection: 91,
+    passRate: 90,
+    attendance: 88,
+    activeAlerts: 5,
+    color: "#f59e0b", // Orange
+    status: "Needs Focus",
+    historicalPerformance: [
+      { year: "2021", score: 74, schoolAvg: 82 },
+      { year: "2022", score: 76, schoolAvg: 84 },
+      { year: "2023", score: 78, schoolAvg: 86 },
+      { year: "2024", score: 80, schoolAvg: 87 },
+      { year: "2025", score: 81, schoolAvg: 88 },
+    ],
+    strengths: [
+      "Strong extracurricular participation (85%)",
+      "Good parent engagement scores (4.2/5)",
+      "Modern facilities & infrastructure",
+      "Low teacher turnover rate (8%)",
+    ],
+    improvements: [
+      "Mathematics performance below average",
+      "Attendance rate needs improvement (88%)",
+      "Fee collection below target",
+      "Higher disciplinary incidents",
+    ],
+    actionPlan: [
+      { task: "Implement Math Remediation Program", priority: "High", status: "Critical" },
+      { task: "Increase Attendance Monitoring", priority: "Medium", status: "Critical" },
+    ]
+  }
+};
 
 export const performanceRanking = [
   { metric: "Attendance", main: 94, north: 92, south: 88 },
   { metric: "Pass Rate", main: 96, north: 93, south: 90 },
-  { metric: "Fee Collection", main: 96, north: 94, south: 91 },
+  { metric: "Fee Coll.", main: 96, north: 94, south: 91 },
   { metric: "AHI", main: 92, north: 88, south: 81 },
 ];
 
@@ -334,36 +519,6 @@ export const comparativeTrends = [
   { month: "Dec", main: 91, north: 87, south: 80 },
   { month: "Jan", main: 92, north: 88, south: 81 },
 ];
-
-export const branchDetail = {
-  name: "South Branch",
-  students: 938,
-  teachers: 52,
-  established: 2019,
-  ahi: 81,
-  feeCollection: 91,
-  passRate: 90,
-  activeAlerts: 5,
-  historicalPerformance: [
-    { year: "2021", score: 74, schoolAvg: 82 },
-    { year: "2022", score: 76, schoolAvg: 84 },
-    { year: "2023", score: 78, schoolAvg: 86 },
-    { year: "2024", score: 80, schoolAvg: 87 },
-    { year: "2025", score: 81, schoolAvg: 88 },
-  ],
-  strengths: [
-    "Strong extracurricular participation (85%)",
-    "Good parent engagement scores (4.2/5)",
-    "Modern facilities & infrastructure",
-    "Low teacher turnover rate (8%)",
-  ],
-  improvements: [
-    "Mathematics performance below average",
-    "Attendance rate needs improvement (88%)",
-    "Fee collection below target",
-    "Higher disciplinary incidents",
-  ],
-};
 
 // ==================== REPORTS ====================
 export const reportStats = {
