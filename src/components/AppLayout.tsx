@@ -3,7 +3,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, GraduationCap, BookOpen,
   DollarSign, AlertTriangle, GitBranch, FileText, Settings, 
-  Menu, X
+  Menu, X, UserCog
 } from "lucide-react";
 
 const navItems = [
@@ -15,6 +15,7 @@ const navItems = [
   { to: "/risks", label: "Risks & Alerts", icon: AlertTriangle },
   { to: "/branches", label: "Branches Comparison", icon: GitBranch },
   { to: "/reports", label: "Reports Center", icon: FileText },
+  { to: "/principals", label: "Principal Management", icon: UserCog },
   { to: "/settings", label: "Settings", icon: Settings },
 ];
 

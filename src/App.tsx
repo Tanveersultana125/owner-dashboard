@@ -15,6 +15,7 @@ import AlertDetail from "@/pages/AlertDetail";
 import BranchesComparison from "@/pages/BranchesComparison";
 import ReportsCenter from "@/pages/ReportsCenter";
 import SettingsPage from "@/pages/SettingsPage";
+import PrincipalManagement from "@/pages/PrincipalManagement";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -41,6 +42,7 @@ const App = () => (
             <Route path="/branches" element={<BranchesComparison />} />
             <Route path="/branches/:id" element={<BranchesComparison />} />
             <Route path="/reports" element={<ReportsCenter />} />
+            <Route path="/principals" element={<PrincipalManagement />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
