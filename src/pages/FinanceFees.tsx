@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { financeStats, branchRevenue, monthlyCollection, paymentModes, recentTransactions, defaultersList, defecitStats } from "@/data/dummyData";
+import { financeStats, branchRevenue, monthlyCollection, paymentModes, recentTransactions, defaultersList } from "@/data/dummyData";
 import { 
   TrendingUp, Search, Filter, MoreVertical, X,
   DollarSign, PieChart as PieChartIcon, BarChart3, Clock, ArrowLeft, ChevronRight

@@ -115,7 +115,7 @@ export default function TeacherPerformance() {
               <h3 className="text-lg font-bold text-[#111827] mb-8">Top Performers</h3>
               <div className="space-y-6">
                 {topTeachers.map((teacher, idx) => (
-                  <div key={idx} className="flex items-center justify-between group cursor-pointer hover:translate-x-1 transition-transform" onClick={() => navigate(`/teachers/${teacher.id || 'TCH-2018-0042'}`)}>
+                  <div key={idx} className="flex items-center justify-between group cursor-pointer hover:translate-x-1 transition-transform" onClick={() => navigate(`/teachers/${teacher.name.replace(/\s+/g, '-').toLowerCase()}`)}>
                     <div className="flex items-center gap-4">
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm ${idx < 3 ? 'bg-emerald-500' : 'bg-amber-400'}`}>{idx + 1}</div>
                       <div>
