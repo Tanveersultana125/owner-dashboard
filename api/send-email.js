@@ -1,16 +1,33 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.VITE_RESEND_API_KEY);
-
 export default async function handler(req, res) {
+  // 1. CORS Headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  // Handle preflight
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { to, name, branch, schoolName } = req.body;
-
   try {
-    const data = await resend.emails.send({
+    const { to, name, branch, schoolName } = req.body;
+    
+    // Get API Key inside handler
+    const apiKey = process.env.VITE_RESEND_API_KEY || process.env.RESEND_API_KEY;
+
+    if (!apiKey || apiKey === "re_123456789") {
+      throw new Error('Resend API Key is missing or invalid on the server environment.');
+    }
+
+    const resend = new Resend(apiKey);
+
+    const { data, error } = await resend.emails.send({
       from: 'EduIntellect <onboarding@resend.dev>',
       to: [to],
       subject: `Welcome to ${schoolName} - Principal Dashboard Access`,
@@ -32,8 +49,14 @@ export default async function handler(req, res) {
       `,
     });
 
+    if (error) {
+      return res.status(400).json({ success: false, error });
+    }
+
     return res.status(200).json({ success: true, data });
+
   } catch (error) {
+    console.error("Vercel API Error:", error.message);
     return res.status(500).json({ success: false, error: error.message });
   }
 }
