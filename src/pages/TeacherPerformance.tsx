@@ -18,7 +18,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { db } from "@/lib/firebase";
+import { collection, onSnapshot, query } from "firebase/firestore";
 
 const branchComparisonData = [
   { category: "Teaching", teacher: 94, branchAvg: 78 },
@@ -31,13 +33,38 @@ const branchComparisonData = [
 export default function TeacherPerformance() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [teachersData, setTeachersData] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("Overview");
 
+  useEffect(() => {
+    const q = query(collection(db, "teachers"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const colors = ["bg-primary", "bg-emerald-500", "bg-orange-500", "bg-blue-500", "bg-purple-500"];
+      const teachers = snapshot.docs.map((doc, index) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          initials: data.name ? data.name.split(' ').map((n: string) => n[0]).join('').toUpperCase() : "T",
+          color: colors[index % colors.length],
+          subject: data.subject || "N/A",
+          classes: data.classes || "N/A",
+          experience: data.experience || "N/A",
+          rating: data.rating || "5.0",
+          status: data.status || "Active",
+          score: data.score || 90
+        };
+      });
+      setTeachersData(teachers);
+    });
+    return () => unsubscribe();
+  }, []);
+
   const selectedTeacher = useMemo(() => {
-    if (id) return teachersList.find(t => t.id === id);
+    if (id) return teachersData.find(t => t.id === id);
     return null;
-  }, [id]);
+  }, [id, teachersData]);
 
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n.replace('.', ''))[0][0] + (name.split(' ').length > 1 ? name.split(' ')[name.split(' ').length - 1][0] : '');
@@ -114,18 +141,37 @@ export default function TeacherPerformance() {
             <div className="bg-white rounded-[2.5rem] border border-slate-100 p-8 shadow-sm">
               <h3 className="text-lg font-bold text-[#111827] mb-8">Top Performers</h3>
               <div className="space-y-6">
-                {topTeachers.map((teacher, idx) => (
-                  <div key={idx} className="flex items-center justify-between group cursor-pointer hover:translate-x-1 transition-transform" onClick={() => navigate(`/teachers/${teacher.name.replace(/\s+/g, '-').toLowerCase()}`)}>
-                    <div className="flex items-center gap-4">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm ${idx < 3 ? 'bg-emerald-500' : 'bg-amber-400'}`}>{idx + 1}</div>
-                      <div>
-                        <p className="font-extrabold text-[#111827] text-sm tracking-tight">{teacher.name}</p>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{teacher.subject} <span className="mx-1">•</span> {teacher.branch}</p>
-                      </div>
-                    </div>
-                    <span className="text-emerald-500 font-black text-sm">{teacher.score}</span>
-                  </div>
-                ))}
+                {teachersData.filter(t => (t.name || "").toLowerCase().includes(searchTerm.toLowerCase())).map((t, idx) => (
+            <div 
+              key={t.id} 
+              className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm hover:shadow-md transition-all cursor-pointer group"
+              onClick={() => navigate(`/teachers/${t.id}`)}
+            >
+              <div className="flex items-center gap-4 mb-6">
+                <div className={`w-14 h-14 rounded-2xl ${t.color} flex items-center justify-center text-lg font-bold text-white shadow-sm ring-4 ring-white`}>{t.initials}</div>
+                <div>
+                  <p className="font-bold text-[#1e293b] text-base group-hover:text-[#1e3a8a] transition-colors">{t.name}</p>
+                  <p className="text-xs text-slate-400 font-bold uppercase tracking-wide">{t.subject}</p>
+                </div>
+              </div>
+              <div className="space-y-3 pt-4 border-t border-slate-50 italic">
+                <div className="flex justify-between items-center"><span className="text-[11px] font-bold text-slate-400 uppercase tracking-tighter">Classes</span><span className="text-sm font-bold text-[#475569]">{t.classes}</span></div>
+                <div className="flex justify-between items-center"><span className="text-[11px] font-bold text-slate-400 uppercase tracking-tighter">Experience</span><span className="text-sm font-bold text-[#475569]">{t.experience}</span></div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-tighter">Rating</span>
+                  <span className="flex items-center gap-1 font-bold text-warning">
+                    <Star className="w-3.5 h-3.5 fill-warning" /> {t.rating}
+                  </span>
+                </div>
+              </div>
+              <div className="mt-6 flex justify-between items-center">
+                <span className={`text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest ${t.status === "Active" ? "bg-green-50 text-green-500 border border-green-100" : "bg-red-50 text-red-500 border border-red-100"}`}>
+                  {t.status}
+                </span>
+                <button className="text-[10px] font-black text-[#1e3a8a] uppercase tracking-tighter opacity-0 group-hover:opacity-100 transition-opacity">View Profile →</button>
+              </div>
+            </div>
+          ))}
               </div>
             </div>
           </div>

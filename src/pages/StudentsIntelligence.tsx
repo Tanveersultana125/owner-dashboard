@@ -17,17 +17,34 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { db } from "@/lib/firebase";
+import { collection, onSnapshot, query } from "firebase/firestore";
 
 export default function StudentsIntelligence() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [studentsData, setStudentsData] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
 
+  useEffect(() => {
+    const q = query(collection(db, "students"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const students = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        academicScore: (doc.data() as any).academicScore || 75, // Default for now
+        attendance: (doc.data() as any).attendance || 90,
+      }));
+      setStudentsData(students);
+    });
+    return () => unsubscribe();
+  }, []);
+
   const selectedStudent = useMemo(() => {
-    if (id) return studentsList.find(s => s.id === id);
+    if (id) return studentsData.find(s => s.id === id);
     return null;
-  }, [id]);
+  }, [id, studentsData]);
 
   // STATUS CONFIGURATION - 100% Marks Based
   const getStatusConfig = (score: number) => {
@@ -235,16 +252,16 @@ export default function StudentsIntelligence() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {studentsList.filter(s => s.name.toLowerCase().includes(searchTerm.toLowerCase())).map((s) => {
+                  {studentsData.filter(s => (s.name || "").toLowerCase().includes(searchTerm.toLowerCase())).map((s) => {
                     const cfg = getStatusConfig(s.academicScore);
                     return (
                     <tr key={s.id} className="hover:bg-slate-50/50 transition-all cursor-pointer group" onClick={() => navigate(`/students/${s.id}`)}>
                       <td className="px-8 py-6">
                         <div className="flex items-center gap-4">
-                          <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-extrabold text-xs text-white shadow-lg ${cfg.shadow} ${cfg.accent} group-hover:scale-110 transition-transform`}> {getInitials(s.name)} </div>
+                          <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-extrabold text-xs text-white shadow-lg ${cfg.shadow} ${cfg.accent} group-hover:scale-110 transition-transform`}> {getInitials(s.name || "S")} </div>
                           <div>
                             <p className="font-extrabold text-[#1e294b] text-sm group-hover:text-blue-600 transition-colors uppercase tracking-tight">{s.name}</p>
-                            <p className="text-[10px] text-slate-400 font-bold">ID: {s.id}</p>
+                            <p className="text-[10px] text-slate-400 font-bold">ID: {s.id.substring(0, 8)}</p>
                           </div>
                         </div>
                       </td>

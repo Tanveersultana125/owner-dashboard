@@ -9,15 +9,31 @@ const COLORS = ['#22c55e', '#f59e0b', '#ef4444'];
 
 export default function Dashboard() {
   const [branches, setBranches] = useState<any[]>([]);
+  const [totalStudents, setTotalStudents] = useState(0);
+  const [totalTeachers, setTotalTeachers] = useState(0);
 
   useEffect(() => {
-    if (!auth.currentUser) return;
-    const branchesRef = collection(db, "schools", auth.currentUser.uid, "branches");
-    const unsubscribe = onSnapshot(branchesRef, (snapshot) => {
-      const branchList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setBranches(branchList);
+    // Fetch Branches (Legacy logic)
+    const branchesRef = collection(db, "schools", auth.currentUser?.uid || "default", "branches");
+    const unsubBranches = onSnapshot(branchesRef, (snapshot) => {
+      setBranches(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
-    return () => unsubscribe();
+
+    // Fetch Total Students from global collection
+    const unsubStudents = onSnapshot(collection(db, "students"), (snapshot) => {
+      setTotalStudents(snapshot.size);
+    });
+
+    // Fetch Total Teachers from global collection
+    const unsubTeachers = onSnapshot(collection(db, "teachers"), (snapshot) => {
+      setTotalTeachers(snapshot.size);
+    });
+
+    return () => {
+      unsubBranches();
+      unsubStudents();
+      unsubTeachers();
+    };
   }, []);
 
   return (
@@ -41,19 +57,19 @@ export default function Dashboard() {
           },
           { 
             title: "Total Students", 
-            value: "4,286", 
-            change: "+124 new this term", 
+            value: totalStudents.toLocaleString(), 
+            change: "Live data from branches", 
             icon: Users, 
             color: "text-blue-500", 
             iconBg: "bg-blue-50" 
           },
           { 
-            title: "Fee Collection Rate", 
-            value: "94.2%", 
-            change: "+1.8% vs last term", 
-            icon: Percent, 
-            color: "text-green-500", 
-            iconBg: "bg-green-50" 
+            title: "Total Teachers", 
+            value: totalTeachers.toLocaleString(), 
+            change: "Across all branches", 
+            icon: Heart, 
+            color: "text-emerald-500", 
+            iconBg: "bg-emerald-50" 
           },
           { 
             title: "Active Alerts", 
