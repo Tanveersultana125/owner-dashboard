@@ -28,7 +28,7 @@ export default async function handler(req, res) {
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        from: "EduIntellect <onboarding@resend.dev>",
+        from: "EduIntellect <invite@edulent.dgion.com>",
         to: [to],
         subject: `Welcome to ${schoolName} - Principal Dashboard Access`,
         html: `
