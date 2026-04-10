@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft, GraduationCap, Calendar, MapPin, CheckCircle2, Circle, Loader2,
+  ChevronRight, Clock,
 } from "lucide-react";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -73,6 +74,15 @@ export default function AlertDetailPage() {
 
   return (
     <div className="space-y-8 max-w-[1400px] mx-auto animate-in fade-in duration-500 pb-16">
+
+      {/* ── Breadcrumb ───────────────────────────────────────────────────────── */}
+      <div className="flex items-center gap-2 text-xs text-slate-400 font-medium">
+        <button onClick={() => navigate("/risks")} className="hover:text-slate-600 transition-colors">
+          Risks &amp; Alerts
+        </button>
+        <ChevronRight className="w-3.5 h-3.5" />
+        <span className="text-slate-600">Alert Details</span>
+      </div>
 
       {/* ── Header Card ─────────────────────────────────────────────────────── */}
       <div className="bg-white rounded-[2rem] border border-slate-100 p-8 shadow-sm">
@@ -252,28 +262,38 @@ export default function AlertDetailPage() {
           </div>
         </div>
 
-        {/* Info Panel */}
+        {/* Similar Historical Alerts */}
         <div className="bg-white p-10 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col gap-6">
-          <h4 className="text-lg font-bold text-[#1e294b]">Alert Summary</h4>
-          <div className="space-y-4">
-            {[
-              { label: "Alert ID",     value: `#${data.alertNum}` },
-              { label: "Branch",       value: data.branchName },
-              { label: "Severity",     value: data.status },
-              { label: "Detected",     value: data.detectedOn },
-              { label: "Type",         value: data.type === "critical" ? "Critical Risk" : "Warning" },
-            ].map((row, i) => (
-              <div key={i} className="flex justify-between items-center py-3 border-b border-slate-50 last:border-none">
-                <span className="text-sm text-slate-400 font-medium">{row.label}</span>
-                <span className="text-sm font-bold text-[#1e294b]">{row.value}</span>
-              </div>
-            ))}
-          </div>
-          <div className={`mt-2 p-5 rounded-2xl text-sm font-semibold leading-relaxed ${bgClass}`}
-            style={{ color: accentColor }}>
+          <h4 className="text-lg font-bold text-[#1e294b]">Similar Historical Alerts</h4>
+
+          {data.historicalAlerts.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 gap-2">
+              <Clock className="w-8 h-8 text-slate-200" />
+              <p className="text-sm text-slate-400 font-medium">No historical alerts yet</p>
+              <p className="text-xs text-slate-300">Resolved alerts will appear here</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {data.historicalAlerts.map((h, i) => (
+                <div key={i} className="flex items-start justify-between p-4 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors border border-slate-100">
+                  <div>
+                    <p className="text-sm font-semibold text-[#1e294b] mb-1">{h.title}</p>
+                    <p className="text-xs text-slate-400">{h.period} • {h.branch} • {h.resolvedIn}</p>
+                  </div>
+                  <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-100 text-emerald-600 shrink-0 ml-3">
+                    {h.status}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Summary footer */}
+          <div className={`p-4 rounded-xl text-sm font-medium leading-relaxed ${bgClass} border`}
+            style={{ borderColor: isCritical ? "#fecaca" : "#fde68a", color: accentColor }}>
             {isCritical
-              ? "⚠️ This alert requires immediate attention. Please take action as soon as possible."
-              : "ℹ️ Monitor this situation closely and take preventive action to avoid escalation."}
+              ? "⚠️ Immediate attention required. Take action as soon as possible."
+              : "ℹ️ Monitor closely and take preventive action to avoid escalation."}
           </div>
         </div>
       </div>

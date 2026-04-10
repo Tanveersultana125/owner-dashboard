@@ -77,24 +77,17 @@ export default function BranchesComparison() {
       );
     }
 
-    const { summary, historicalTrend, benchmarkComparison, strengths, improvements, actionPlan } = detailData;
+    const { summary, historicalTrend, benchmarkComparison, strengths, improvements, actionPlan, kpiNotes } = detailData;
     const hasTrendData    = historicalTrend.some(t => t.score > 0);
     const benchmarkFiltered = benchmarkComparison.filter(row => row.branch > 0);
+
+    // KPI cards matching screenshot: AHI, Fee Collection, Pass Rate, Active Alerts
     const kpiCards = [
-      (summary.attendance > 0 || summary.passRate > 0)
-        ? { label: "Academic Health Index", value: `${summary.ahi}%`, note: summary.ahi >= 85 ? "Above target" : "Below target", color: summary.color }
-        : null,
-      summary.attendance > 0
-        ? { label: "Attendance", value: `${summary.attendance}%`, note: summary.attendance >= 85 ? "On track" : "Below target", color: summary.color }
-        : null,
-      summary.passRate > 0
-        ? { label: "Pass Rate", value: `${summary.passRate}%`, note: summary.passRate >= 75 ? "Performing well" : "Needs attention", color: summary.color }
-        : null,
-      summary.feeCollection > 0
-        ? { label: "Fee Collection", value: `${summary.feeCollection}%`, note: summary.feeCollection >= 85 ? "On target" : "Below target", color: summary.color }
-        : null,
-      { label: "Active Alerts", value: summary.activeAlerts.toString(), note: summary.activeAlerts === 0 ? "No active risks" : "Students at risk", color: summary.activeAlerts > 0 ? "#ef4444" : "#22c55e" },
-    ].filter(Boolean) as { label: string; value: string; note: string; color: string }[];
+      { label: "Academic Health Index", value: `${summary.ahi}%`,           note: kpiNotes.ahi,      borderColor: "border-amber-200",  bgColor: "bg-amber-50/50",  textColor: summary.ahi >= 85 ? "text-emerald-500" : summary.ahi >= 70 ? "text-amber-500" : "text-red-500" },
+      { label: "Fee Collection",        value: summary.feeCollection > 0 ? `${summary.feeCollection}%` : "N/A", note: kpiNotes.fee, borderColor: "border-amber-200", bgColor: "bg-amber-50/50", textColor: summary.feeCollection >= 90 ? "text-emerald-500" : "text-amber-500" },
+      { label: "Pass Rate",             value: summary.passRate > 0 ? `${summary.passRate}%` : "N/A", note: kpiNotes.passRate, borderColor: "border-amber-200", bgColor: "bg-amber-50/50", textColor: summary.passRate >= 85 ? "text-emerald-500" : "text-amber-500" },
+      { label: "Active Alerts",         value: summary.activeAlerts.toString(), note: kpiNotes.alerts, borderColor: "border-red-200",  bgColor: "bg-red-50/50",    textColor: summary.activeAlerts === 0 ? "text-emerald-500" : "text-red-500" },
+    ];
 
     return (
       <div className="space-y-8 max-w-[1400px] mx-auto animate-in fade-in duration-500 pb-16">
@@ -138,15 +131,15 @@ export default function BranchesComparison() {
               </div>
             </div>
 
-            {/* KPI Cards — only those with real data */}
-            <div className={`grid grid-cols-2 ${kpiCards.length <= 2 ? "md:grid-cols-2" : kpiCards.length === 3 ? "md:grid-cols-3" : "md:grid-cols-4"} gap-5 mb-12`}>
+            {/* KPI Cards — matching screenshot: AHI, Fee Collection, Pass Rate, Active Alerts */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-5 mb-12">
               {kpiCards.map((kpi, i) => (
-                <div key={i} className="p-6 rounded-[1.2rem] border border-slate-100 bg-[#f8fafc]/50 transition-all hover:bg-white hover:shadow-lg">
+                <div key={i} className={`p-6 rounded-[1.2rem] border ${kpi.borderColor} ${kpi.bgColor} transition-all hover:bg-white hover:shadow-lg`}>
                   <p className="text-slate-400 text-[11px] font-bold uppercase tracking-tight mb-3">{kpi.label}</p>
-                  <h3 className="text-3xl font-black tracking-tighter mb-1.5" style={{ color: kpi.color }}>
+                  <h3 className={`text-3xl font-black tracking-tighter mb-1.5 ${kpi.textColor}`}>
                     {kpi.value}
                   </h3>
-                  <p className="text-[11px] font-bold" style={{ color: kpi.color }}>{kpi.note}</p>
+                  <p className={`text-[11px] font-bold ${kpi.textColor}`}>{kpi.note}</p>
                 </div>
               ))}
             </div>
@@ -155,9 +148,9 @@ export default function BranchesComparison() {
             {(hasTrendData || benchmarkFiltered.length > 0) && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 mb-12">
 
-              {/* Attendance Trend */}
+              {/* Historical Performance */}
               <div>
-                <h3 className="text-base font-bold text-[#111827] mb-8">Attendance Trend (Last 6 Months)</h3>
+                <h3 className="text-base font-bold text-[#111827] mb-8">Historical Performance</h3>
                 {!hasTrendData ? (
                   <div className="h-[260px] flex flex-col items-center justify-center border border-dashed border-slate-200 rounded-xl gap-2">
                     <p className="text-sm text-slate-400 font-semibold">No attendance data yet</p>
@@ -296,10 +289,8 @@ export default function BranchesComparison() {
 
   const { branches, performanceRanking, comparativeTrends, efficiencyMetrics } = listData;
 
-  // Only show ranking rows where at least one branch has real data
-  const rankingWithData = performanceRanking.filter(row =>
-    branches.some((_, i) => (row[`b${i}`] as number) > 0)
-  );
+  // Show all ranking rows always (0 will render as short bar)
+  const rankingWithData = performanceRanking;
   // Only show trends chart if any month has real attendance data
   const hasTrendsData = comparativeTrends.some(row =>
     branches.some((_, i) => (row[`b${i}`] as number) > 0)
@@ -350,27 +341,24 @@ export default function BranchesComparison() {
                 )}
               </div>
 
-              {/* Only render rows that have real data */}
-              {(() => {
-                const available = [
-                  { label: "AHI",            value: b.ahi,           show: b.attendance > 0 || b.passRate > 0 },
-                  { label: "Attendance",     value: b.attendance,    show: b.attendance > 0 },
-                  { label: "Pass Rate",      value: b.passRate,      show: b.passRate > 0 },
-                  { label: "Fee Collection", value: b.feeCollection, show: b.feeCollection > 0 },
-                ].filter(m => m.show);
-                return available.length > 0 ? (
-                  <div className="space-y-0 divide-y divide-slate-50">
-                    {available.map(m => (
-                      <div key={m.label} className="flex justify-between items-center py-4">
-                        <span className="text-sm font-medium text-slate-500">{m.label}</span>
-                        <span className={`text-sm font-black ${metricColor(m.value)}`}>{m.value}%</span>
-                      </div>
-                    ))}
+              {/* Always show all 4 metrics — N/A when data not yet available */}
+              <div className="divide-y divide-slate-50">
+                {[
+                  { label: "AHI",            value: b.ahi,           hasData: b.ahi > 0 },
+                  { label: "Fee Collection", value: b.feeCollection, hasData: b.feeCollection > 0 },
+                  { label: "Pass Rate",      value: b.passRate,      hasData: b.passRate > 0 },
+                  { label: "Attendance",     value: b.attendance,    hasData: b.attendance > 0 },
+                ].map(m => (
+                  <div key={m.label} className="flex justify-between items-center py-3.5">
+                    <span className="text-sm text-slate-500">{m.label}</span>
+                    {m.hasData ? (
+                      <span className={`text-sm font-bold ${metricColor(m.value)}`}>{m.value}%</span>
+                    ) : (
+                      <span className="text-sm font-semibold text-slate-300">N/A</span>
+                    )}
                   </div>
-                ) : (
-                  <p className="text-xs text-slate-300 font-medium py-4 text-center">No performance data yet</p>
-                );
-              })()}
+                ))}
+              </div>
 
               {b.activeAlerts > 0 && (
                 <div className="mt-4 px-4 py-2.5 rounded-xl bg-[#fef2f2] border border-rose-100 flex items-center gap-2">

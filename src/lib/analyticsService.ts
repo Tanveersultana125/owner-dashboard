@@ -152,14 +152,16 @@ export async function loadCoreSnapshot(uid: string): Promise<CoreSnapshot> {
   const cached = getCache<CoreSnapshot>(cacheKey);
   if (cached) return cached;
 
-  const [branchesSnap, studentsSnap, attendanceSnap, resultsSnap, feesSnap, teachersSnap] =
+  const [branchesSnap, studentsSnap, attendanceSnap, resultsSnap, testScoresSnap, feesSnap, teachersSnap, enrollmentsSnap] =
     await Promise.all([
       getDocs(collection(db, "schools", uid, "branches")),
       getDocs(collection(db, "students")).catch(() => ({ docs: [] as any[] })),
       getDocs(collection(db, "attendance")).catch(() => ({ docs: [] as any[] })),
       getDocs(collection(db, "results")).catch(() => ({ docs: [] as any[] })),
+      getDocs(collection(db, "test_scores")).catch(() => ({ docs: [] as any[] })),
       getDocs(collection(db, "fees")).catch(() => ({ docs: [] as any[] })),
       getDocs(collection(db, "teachers")).catch(() => ({ docs: [] as any[] })),
+      getDocs(collection(db, "enrollments")).catch(() => ({ docs: [] as any[] })),
     ]);
 
   const months = getLast6Months();
@@ -209,22 +211,54 @@ export async function loadCoreSnapshot(uid: string): Promise<CoreSnapshot> {
     branchMonthAtt.set(b.id, mMap);
   });
 
-  // Students
+  // Teachers → build teacherId-to-branchId map
+  // CRITICAL: also try teacher's doc ID (= teacher auth uid, which branches store as `uid` field)
+  const teacherBranchMap = new Map<string, string>();
+  (teachersSnap.docs as any[]).forEach(d => {
+    const t = d.data();
+    let cid = resolveCanonical(t);
+    // Fallback: teacher doc ID itself might match a branch's uid
+    if (!cid) cid = anyIdToCanonical.get(d.id) || "";
+    // Fallback: teacher.uid field (auth uid) might match
+    if (!cid && t.uid) cid = anyIdToCanonical.get(t.uid) || "";
+    if (cid && branchTeachers.has(cid)) {
+      branchTeachers.set(cid, (branchTeachers.get(cid) || 0) + 1);
+      teacherBranchMap.set(d.id, cid);
+    }
+  });
+
+  // Enrollments → build studentId-to-branchId via teacher chain
+  const studentBranchViaEnrollment = new Map<string, string>();
+  (enrollmentsSnap.docs as any[]).forEach(d => {
+    const e = d.data();
+    const sid = e.studentId as string;
+    const tid = e.teacherId as string;
+    if (!sid || studentBranchViaEnrollment.has(sid)) return;
+    const cid = teacherBranchMap.get(tid);
+    if (cid) studentBranchViaEnrollment.set(sid, cid);
+  });
+
+  // Students — try direct fields first, then enrollment chain, then doc ID
   (studentsSnap.docs as any[]).forEach(d => {
     const s = d.data();
-    const cid = resolveCanonical(s);
+    let cid = resolveCanonical(s);
+    if (!branchStudents.has(cid)) cid = studentBranchViaEnrollment.get(d.id) || "";
+    if (!branchStudents.has(cid)) cid = anyIdToCanonical.get(d.id) || "";
     if (!branchStudents.has(cid)) return;
     branchStudents.get(cid)!.add(d.id);
     studentBranch.set(d.id, cid);
   });
 
-  // Teachers
-  (teachersSnap.docs as any[]).forEach(d => {
-    const t = d.data();
-    const cid = resolveCanonical(t);
-    if (!branchTeachers.has(cid)) return;
-    branchTeachers.set(cid, (branchTeachers.get(cid) || 0) + 1);
-  });
+  // Last-resort fallback: if no students matched any branch but students exist,
+  // assign all to the first branch so dashboard is never empty
+  const totalMapped = [...branchStudents.values()].reduce((s, set) => s + set.size, 0);
+  if (totalMapped === 0 && studentsSnap.docs.length > 0 && branches.length > 0) {
+    const fallbackId = branches[0].id;
+    (studentsSnap.docs as any[]).forEach(d => {
+      branchStudents.get(fallbackId)!.add(d.id);
+      studentBranch.set(d.id, fallbackId);
+    });
+  }
 
   // Attendance
   (attendanceSnap.docs as any[]).forEach(d => {
@@ -249,14 +283,21 @@ export async function loadCoreSnapshot(uid: string): Promise<CoreSnapshot> {
     }
   });
 
-  // Results
-  (resultsSnap.docs as any[]).forEach(d => {
-    const r = d.data();
-    const cid = studentBranch.get(r.studentId || "");
-    if (!cid) return;
+  // Results — use both `results` and `test_scores` collections
+  const processResult = (r: any, cid: string) => {
     const res = branchRes.get(cid)!;
     res.total++;
     if ((r.percentage || r.score || 0) >= 50) res.passed++;
+  };
+  (resultsSnap.docs as any[]).forEach(d => {
+    const r = d.data();
+    const cid = studentBranch.get(r.studentId || "");
+    if (cid) processResult(r, cid);
+  });
+  (testScoresSnap.docs as any[]).forEach(d => {
+    const r = d.data();
+    const cid = studentBranch.get(r.studentId || "");
+    if (cid) processResult(r, cid);
   });
 
   // Fees

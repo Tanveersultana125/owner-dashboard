@@ -194,39 +194,51 @@ export default function RisksAlerts() {
       <div className="bg-white rounded-[2rem] md:rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden p-6 md:p-10 lg:p-14">
         <h3 className="text-lg md:text-xl font-extrabold text-[#111827] mb-8 md:mb-12 uppercase tracking-wide">Active Alerts</h3>
         <div className="space-y-6">
-          {activeData.alerts.length === 0 ? (
+          {activeData.alerts.length === 0 || (activeData.alerts.length === 1 && activeData.alerts[0].id === 'no-alerts') ? (
             <div className="py-12 md:py-20 flex flex-col items-center justify-center text-center">
               <CheckCircle2 className="w-12 h-12 md:w-16 md:h-16 text-emerald-500 mb-4 md:mb-6 opacity-20" />
               <p className="text-[11px] md:text-sm font-black text-slate-400 uppercase tracking-widest">Great! No active alerts found</p>
             </div>
           ) : (
-            activeData.alerts.map((alert) => (
-              <div key={alert.id} className={`p-6 md:p-8 rounded-[1.5rem] md:rounded-[2.5rem] relative overflow-hidden transition-all hover:translate-y-[-5px] duration-500 shadow-sm ${alert.type === 'critical' ? 'bg-[#fef2f2]' : alert.type === 'warning' ? 'bg-[#fffbeb]' : 'bg-[#f0f9ff]'}`}>
-                <div className={`absolute top-0 left-0 w-1.5 md:w-2 h-full ${alert.type === 'critical' ? 'bg-[#ef4444]' : alert.type === 'warning' ? 'bg-[#f59e0b]' : 'bg-[#0ea5e9]'}`}></div>
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 md:gap-8 relative z-10">
-                  <div className="flex flex-col sm:flex-row items-start gap-5 md:gap-8">
-                    <div className={`w-12 h-12 md:w-14 md:h-14 rounded-xl md:rounded-2xl flex items-center justify-center text-white shrink-0 ${alert.type === 'critical' ? 'bg-[#ef4444]' : alert.type === 'warning' ? 'bg-[#f59e0b]' : 'bg-[#0ea5e9]'}`}>
-                       {getAlertIcon(alert.title)}
-                    </div>
-                    <div>
-                      <div className="flex flex-wrap items-center gap-3 md:gap-4 mb-2 md:mb-3">
-                        <h4 className="text-lg md:text-xl font-extrabold text-[#1e294b] tracking-tight">{alert.title}</h4>
-                        <span className={`px-3 py-1 rounded-lg text-[8px] md:text-[9px] font-black uppercase tracking-widest ${alert.type === 'critical' ? 'bg-[#ef4444] text-white' : alert.type === 'warning' ? 'bg-[#f59e0b] text-white' : 'bg-[#0ea5e9] text-white'}`}>
-                          {alert.status}
-                        </span>
+            activeData.alerts.filter(a => a.id !== 'no-alerts').map((alert) => {
+              const accentBg    = alert.type === 'critical' ? 'bg-[#fef2f2]' : alert.type === 'warning' ? 'bg-[#fffbeb]' : 'bg-[#f0f9ff]';
+              const accentBar   = alert.type === 'critical' ? 'bg-[#ef4444]' : alert.type === 'warning' ? 'bg-[#f59e0b]' : 'bg-[#0ea5e9]';
+              const accentIcon  = alert.type === 'critical' ? 'bg-[#ef4444]' : alert.type === 'warning' ? 'bg-[#f59e0b]' : 'bg-[#0ea5e9]';
+              const badgeBg     = alert.type === 'critical' ? 'bg-[#ef4444]' : alert.type === 'warning' ? 'bg-[#f59e0b]' : 'bg-[#0ea5e9]';
+
+              return (
+                <div key={alert.id} className={`p-5 md:p-6 rounded-2xl relative overflow-hidden transition-all hover:-translate-y-0.5 duration-300 shadow-sm border ${alert.type === 'critical' ? 'border-red-100' : alert.type === 'warning' ? 'border-amber-100' : 'border-sky-100'} ${accentBg}`}>
+                  <div className={`absolute top-0 left-0 w-1 h-full ${accentBar}`} />
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pl-3">
+                    <div className="flex items-start gap-4">
+                      <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-white shrink-0 ${accentIcon}`}>
+                        {getAlertIcon(alert.title)}
                       </div>
-                      <p className="text-slate-500 font-bold text-xs md:text-sm tracking-tight leading-relaxed">{alert.desc}</p>
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2 mb-1">
+                          <h4 className="text-base font-bold text-[#1e294b] tracking-tight">{alert.title}</h4>
+                          <span className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold text-white ${badgeBg}`}>
+                            {alert.status}
+                          </span>
+                        </div>
+                        <p className="text-slate-500 text-sm leading-snug">
+                          {alert.desc}
+                          {alert.timing && (
+                            <span className="text-slate-400"> • {alert.timing}</span>
+                          )}
+                        </p>
+                      </div>
                     </div>
+                    <button
+                      onClick={() => navigate(`/risks/${alert.id}`)}
+                      className="shrink-0 px-5 py-2 bg-[#1e294b] text-white text-xs font-bold rounded-xl hover:bg-[#1e3a8a] transition-colors shadow-sm"
+                    >
+                      View Details
+                    </button>
                   </div>
-                  <button 
-                    onClick={() => navigate(`/risks/${alert.id}`)}
-                    className="w-full lg:w-auto px-8 py-3 bg-[#1e294b] text-white text-[10px] md:text-[11px] font-black rounded-xl md:rounded-2xl uppercase tracking-widest hover:bg-[#1e3a8a] transition-all shrink-0 shadow-lg shadow-blue-900/10"
-                  >
-                    View Details
-                  </button>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>

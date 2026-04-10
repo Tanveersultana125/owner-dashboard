@@ -8,7 +8,7 @@ import {
   loadCoreSnapshot, invalidateCache,
   calculateAHI, calculatePassRate,
   generateInsights, getBranchTrends,
-  computeStatus, avg, getLast6Months,
+  computeStatus, avg,
 } from "./analyticsService";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -48,6 +48,8 @@ export type BranchDetailData = {
   strengths: string[];
   improvements: string[];
   actionPlan: { task: string; sub: string; priority: string; prColor: string }[];
+  kpiNotes: { ahi: string; fee: string; passRate: string; alerts: string };
+  bestBranchName: string;
 };
 
 // ── Internal: compute per-branch summaries ────────────────────────────────────
@@ -206,10 +208,37 @@ export async function fetchBranchDetail(branchId: string): Promise<BranchDetailD
   if (summaryIdx === -1) throw new Error("Branch not found");
   const summary = branches[summaryIdx];
 
-  const schoolAvgAhi          = avg(branches.map(b => b.ahi));
-  const schoolAvgAttendance   = avg(branches.filter(b => b.attendance > 0).map(b => b.attendance));
-  const schoolAvgPassRate     = avg(branches.filter(b => b.passRate > 0).map(b => b.passRate));
+  const schoolAvgAhi           = avg(branches.map(b => b.ahi));
+  const schoolAvgAttendance    = avg(branches.filter(b => b.attendance > 0).map(b => b.attendance));
+  const schoolAvgPassRate      = avg(branches.filter(b => b.passRate > 0).map(b => b.passRate));
   const schoolAvgFeeCollection = avg(branches.filter(b => b.feeCollection > 0).map(b => b.feeCollection));
+
+  // Best branch (highest AHI) for comparison notes
+  const bestBranch = branches.reduce((a, b) => b.ahi > a.ahi ? b : a, branches[0]);
+  const bestBranchName = bestBranch?.name.split(" ")[0] || "Top";
+  const isTopBranch = bestBranch?.id === summary.id;
+
+  // Comparison notes for KPI cards
+  const ahiDiff  = isTopBranch ? 0 : summary.ahi - bestBranch.ahi;
+  const feeDiff  = summary.feeCollection > 0 ? summary.feeCollection - 100 : 0;
+  const passDiff = isTopBranch ? 0 : summary.passRate - bestBranch.passRate;
+
+  const kpiNotes = {
+    ahi: isTopBranch
+      ? "Best performing branch"
+      : `↓ ${Math.abs(ahiDiff)}% below ${bestBranchName}`,
+    fee: feeDiff >= 0
+      ? "Above target"
+      : `↓ ${Math.abs(feeDiff)}% below target`,
+    passRate: isTopBranch
+      ? "Highest pass rate"
+      : `↓ ${Math.abs(passDiff)}% below ${bestBranchName}`,
+    alerts: summary.activeAlerts === 0
+      ? "No active risks"
+      : summary.activeAlerts === branches.reduce((max, b) => Math.max(max, b.activeAlerts), 0)
+        ? "Highest among branches"
+        : `${summary.activeAlerts} student${summary.activeAlerts > 1 ? "s" : ""} at risk`,
+  };
 
   const historicalTrend = getBranchTrends(
     branchMonthAtt.get(summary.id)!,
@@ -289,6 +318,7 @@ export async function fetchBranchDetail(branchId: string): Promise<BranchDetailD
   return {
     summary, schoolAvgAhi, schoolAvgAttendance, schoolAvgPassRate,
     historicalTrend, benchmarkComparison, strengths, improvements, actionPlan,
+    kpiNotes, bestBranchName,
   };
 }
 
