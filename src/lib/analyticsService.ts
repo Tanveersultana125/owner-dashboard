@@ -148,14 +148,17 @@ export function computeStatus(ahi: number): "Strong" | "Good" | "Needs Focus" {
   return "Needs Focus";
 }
 
-/** calculateAHI — weighted: 40% attendance, 40% passRate, 20% feeCollection */
+/** calculateAHI — weighted: 40% attendance, 40% passRate, 20% feeCollection.
+ *  Only buckets with data (value > 0) contribute to the score; the denominator
+ *  scales down accordingly so a branch with only attendance data isn't punished
+ *  for having no test scores or fee records yet. */
 export function calculateAHI(attendance: number, passRate: number, feeCollection: number): number {
-  if (attendance === 0 && passRate === 0) return 0;
-  const attW  = attendance   * 0.4;
-  const prW   = passRate     * 0.4;
-  const feeW  = feeCollection > 0 ? feeCollection * 0.2 : 0;
-  const denom = feeCollection > 0 ? 1 : 0.8; // normalise when no fee data
-  return Math.round((attW + prW + feeW) / denom);
+  let weighted = 0;
+  let weightUsed = 0;
+  if (attendance    > 0) { weighted += attendance    * 0.4; weightUsed += 0.4; }
+  if (passRate      > 0) { weighted += passRate      * 0.4; weightUsed += 0.4; }
+  if (feeCollection > 0) { weighted += feeCollection * 0.2; weightUsed += 0.2; }
+  return weightUsed > 0 ? Math.round(weighted / weightUsed) : 0;
 }
 
 /** calculatePassRate from raw counts */

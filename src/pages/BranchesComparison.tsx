@@ -686,7 +686,10 @@ export default function BranchesComparison() {
                 <span className={`px-5 py-2 rounded-lg text-[11px] font-black uppercase tracking-widest text-white ${statusConfig(summary.status)}`}>
                   {summary.status}
                 </span>
-                <Button className="h-10 px-5 rounded-lg bg-[#1e294b] text-white text-[11px] font-bold hover:bg-[#1e3a8a] shadow-lg">
+                <Button
+                  onClick={() => navigate("/reports")}
+                  className="h-10 px-5 rounded-lg bg-[#1e294b] text-white text-[11px] font-bold hover:bg-[#1e3a8a] shadow-lg"
+                >
                   Generate Report
                 </Button>
               </div>

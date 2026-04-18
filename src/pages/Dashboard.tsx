@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { db, auth } from "@/lib/firebase";
 import { collection, getDocs, query, where, orderBy, limit, onSnapshot, doc, getDoc, setDoc } from "firebase/firestore";
 import { calculateAHI, invalidateCache } from "@/lib/analyticsService";
@@ -351,6 +351,23 @@ export default function Dashboard() {
 
   const displayAlertsCount = activeAlerts;
 
+  /* ── real month-over-month deltas from improvementTimeline ── */
+  const deltas = useMemo(() => {
+    if (improvementTimeline.length < 2) return { ahi: null, fee: null } as { ahi: number | null; fee: number | null };
+    const last = improvementTimeline[improvementTimeline.length - 1];
+    const prev = improvementTimeline[improvementTimeline.length - 2];
+    return {
+      ahi: last?.ahi  != null && prev?.ahi  != null ? last.ahi  - prev.ahi  : null,
+      fee: last?.fee  != null && prev?.fee  != null ? last.fee  - prev.fee  : null,
+    };
+  }, [improvementTimeline]);
+
+  /* ── critical alert count (severity === "critical") ── */
+  const criticalAlerts = useMemo(
+    () => alerts.filter(a => (a.severity || "").toLowerCase() === "critical").length,
+    [alerts]
+  );
+
   const filteredAlerts = alerts.filter(alert => {
     if (selectedAlertBranch === "all") return true;
     return alert.branchId === selectedAlertBranch || alert.schoolId === selectedAlertBranch;
@@ -422,19 +439,19 @@ export default function Dashboard() {
           {
             title:  "Academic Health Index",
             value:  loading ? "—" : ahi.toString(),
-            badge:  "+2.3%",
-            label:  "vs last month",
+            badge:  deltas.ahi != null ? `${deltas.ahi >= 0 ? "+" : ""}${deltas.ahi}` : "—",
+            label:  deltas.ahi != null ? "vs last month" : "no prior data",
             icon:   Activity,
-            color:  "text-green-500",
+            color:  deltas.ahi != null && deltas.ahi >= 0 ? "text-green-500" : "text-red-500",
             bg:     "bg-green-50",
-            up:     true,
+            up:     deltas.ahi == null ? true : deltas.ahi >= 0,
             href:   "/academics",
           },
           {
             title:  "Total Students",
             value:  loading ? "—" : totalStudents.toLocaleString(),
-            badge:  "+124",
-            label:  "new this term",
+            badge:  branches.length > 0 ? `${branches.length}` : "—",
+            label:  branches.length > 0 ? `across ${branches.length} branch${branches.length !== 1 ? "es" : ""}` : "no branches yet",
             icon:   Users,
             color:  "text-blue-500",
             bg:     "bg-blue-50",
@@ -444,23 +461,23 @@ export default function Dashboard() {
           {
             title:  "Fee Collection Rate",
             value:  loading ? "—" : `${feeRate}%`,
-            badge:  "+1.8%",
-            label:  "vs last term",
+            badge:  deltas.fee != null ? `${deltas.fee >= 0 ? "+" : ""}${deltas.fee}%` : "—",
+            label:  deltas.fee != null ? "vs last month" : "no prior data",
             icon:   Percent,
-            color:  "text-emerald-500",
+            color:  deltas.fee != null && deltas.fee >= 0 ? "text-emerald-500" : "text-red-500",
             bg:     "bg-emerald-50",
-            up:     true,
+            up:     deltas.fee == null ? true : deltas.fee >= 0,
             href:   "/finance",
           },
           {
             title:  "Active Alerts",
             value:  loading ? "—" : displayAlertsCount.toString(),
-            badge:  "+3",
-            label:  "since yesterday",
+            badge:  criticalAlerts > 0 ? `${criticalAlerts}` : "0",
+            label:  criticalAlerts > 0 ? "critical" : "no critical",
             icon:   Bell,
-            color:  "text-red-500",
+            color:  criticalAlerts > 0 ? "text-red-500" : "text-slate-400",
             bg:     "bg-red-50",
-            up:     false,
+            up:     criticalAlerts === 0,
             href:   "/risks",
           },
         ].map((s) => (

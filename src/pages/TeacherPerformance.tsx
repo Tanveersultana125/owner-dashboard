@@ -71,22 +71,23 @@ export default function TeacherPerformance() {
     const load = async () => {
       try {
         const ownerUid = auth.currentUser?.uid;
+        if (!ownerUid) { setLoading(false); return; }
 
         /* 1. branches subcollection */
         const bMap = new Map<string, string>();
-        if (ownerUid) {
-          const bSnap = await getDocs(collection(db, "schools", ownerUid, "branches"));
-          bSnap.docs.forEach(d => {
-            const data = d.data() as any;
-            const bid  = data.branchId || d.id;
-            const bn   = data.name || data.branchName || "";
-            if (bid && bn) bMap.set(bid, bn);
-          });
-        }
+        const bSnap = await getDocs(collection(db, "schools", ownerUid, "branches"));
+        bSnap.docs.forEach(d => {
+          const data = d.data() as any;
+          const bid  = data.branchId || d.id;
+          const bn   = data.name || data.branchName || "";
+          if (bid && bn) bMap.set(bid, bn);
+        });
         setBranchMap(bMap);
 
-        /* 2. teachers */
-        const tSnap = await getDocs(collection(db, "teachers"));
+        /* 2. teachers — scoped to this school */
+        const tSnap = await getDocs(
+          query(collection(db, "teachers"), where("schoolId", "==", ownerUid))
+        );
         const rawTeachers = tSnap.docs.map((d, i) => ({
           _docId: d.id,
           ...d.data() as any,
@@ -94,8 +95,10 @@ export default function TeacherPerformance() {
         }));
         setTeachers(rawTeachers);
 
-        /* 3. test_scores → teacherId → percentage[] */
-        const scSnap = await getDocs(collection(db, "test_scores"));
+        /* 3. test_scores → teacherId → percentage[] — scoped */
+        const scSnap = await getDocs(
+          query(collection(db, "test_scores"), where("schoolId", "==", ownerUid))
+        );
         const sMap = new Map<string, number[]>();
         // for monthly overview
         const monthScoreMap = new Map<string, number[]>(); // month → scores[]
@@ -117,8 +120,10 @@ export default function TeacherPerformance() {
         });
         setScoreMap(sMap);
 
-        /* 4. attendance → teacherId → {p,t} */
-        const attSnap = await getDocs(collection(db, "attendance"));
+        /* 4. attendance → teacherId → {p,t} — scoped */
+        const attSnap = await getDocs(
+          query(collection(db, "attendance"), where("schoolId", "==", ownerUid))
+        );
         const aMap = new Map<string, { p: number; t: number }>();
         const monthAttMap = new Map<string, { p: number; t: number }>();
         attSnap.docs.forEach(d => {
@@ -145,8 +150,10 @@ export default function TeacherPerformance() {
         });
         setAttMap(aMap);
 
-        /* 5. classes → teacherId → classes[] */
-        const clSnap = await getDocs(collection(db, "classes"));
+        /* 5. classes → teacherId → classes[] — scoped */
+        const clSnap = await getDocs(
+          query(collection(db, "classes"), where("schoolId", "==", ownerUid))
+        );
         const cMap = new Map<string, any[]>();
         clSnap.docs.forEach(d => {
           const data = d.data() as any;
@@ -278,9 +285,16 @@ export default function TeacherPerformance() {
 
     const fetchDetail = async () => {
       try {
-        /* a. test_scores for this teacher */
+        const ownerUid = auth.currentUser?.uid;
+        if (!ownerUid) { setDetailLoading(false); return; }
+
+        /* a. test_scores for this teacher — scoped */
         const scSnap = await getDocs(
-          query(collection(db, "test_scores"), where("teacherId", "==", id))
+          query(
+            collection(db, "test_scores"),
+            where("schoolId", "==", ownerUid),
+            where("teacherId", "==", id),
+          )
         );
         const tScores = scSnap.docs.map(d => d.data() as any);
 
@@ -301,9 +315,13 @@ export default function TeacherPerformance() {
         });
         setDetailTimeline(timeline);
 
-        /* b. attendance for this teacher */
+        /* b. attendance for this teacher — scoped */
         const attSnap = await getDocs(
-          query(collection(db, "attendance"), where("teacherId", "==", id))
+          query(
+            collection(db, "attendance"),
+            where("schoolId", "==", ownerUid),
+            where("teacherId", "==", id),
+          )
         );
         const attDocs = attSnap.docs.map(d => d.data() as any);
         const attP = attDocs.filter(d => (d.status || "").toLowerCase() === "present").length;
@@ -311,19 +329,27 @@ export default function TeacherPerformance() {
         const tAttPct = attT > 0 ? Math.round((attP / attT) * 100) : null;
         setDetailAttPct(tAttPct);
 
-        /* c. classes for this teacher */
+        /* c. classes for this teacher — scoped */
         const clSnap = await getDocs(
-          query(collection(db, "classes"), where("teacherId", "==", id))
+          query(
+            collection(db, "classes"),
+            where("schoolId", "==", ownerUid),
+            where("teacherId", "==", id),
+          )
         );
         const tClasses = clSnap.docs.map(d => ({ id: d.id, ...d.data() as any }));
         setDetailClasses(tClasses);
 
-        /* d. students taught: enrollments in those classes */
+        /* d. students taught: enrollments in those classes — scoped */
         let studentCount = 0;
         if (tClasses.length > 0) {
           const classIds = tClasses.map(c => c.id).slice(0, 10);
           const enSnap = await getDocs(
-            query(collection(db, "enrollments"), where("classId", "in", classIds))
+            query(
+              collection(db, "enrollments"),
+              where("schoolId", "==", ownerUid),
+              where("classId", "in", classIds),
+            )
           );
           studentCount = enSnap.size;
         }

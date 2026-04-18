@@ -130,7 +130,46 @@ export default function TeacherProfile() {
           allSc.docs.forEach(d=>{const data=d.data() as any;if(branchTIds.includes(data.teacherId||"")){const p=parseFloat(data.percentage??data.score??"");if(!isNaN(p))bScores.push(p);}});
           const bAvg=bScores.length?Math.round(bScores.reduce((a,b)=>a+b,0)/bScores.length):avg;
           const bPass=bScores.length?Math.round(bScores.filter(v=>v>=60).length/bScores.length*100):pass;
-          setVsBranch([{category:"Avg Score",teacher:avg,branchAvg:bAvg},{category:"Pass Rate",teacher:pass,branchAvg:bPass},{category:"Attendance",teacher:attDocs.length>0?Math.round((attP/attDocs.length)*100):0,branchAvg:80},{category:"Classes",teacher:tClasses.length,branchAvg:Math.max(1,Math.round(branchTIds.length>0?branchTIds.length/2:tClasses.length))}]);
+
+          // Real branch attendance average — aggregate attendance for other teachers in same branch
+          const tAttPct = attDocs.length > 0 ? Math.round((attP / attDocs.length) * 100) : 0;
+          let bAtt = tAttPct;
+          let bClassCount = tClasses.length;
+          if (branchTIds.length > 0) {
+            const attIdChunks: string[][] = [];
+            for (let i = 0; i < branchTIds.length; i += 10) attIdChunks.push(branchTIds.slice(i, i + 10));
+            let bPres = 0, bTotal = 0;
+            let bClassTotal = 0;
+            for (const chunk of attIdChunks) {
+              const [brAttSnap, brClSnap] = await Promise.all([
+                getDocs(query(
+                  collection(db, "attendance"),
+                  where("schoolId", "==", schoolId),
+                  where("teacherId", "in", chunk),
+                )),
+                getDocs(query(
+                  collection(db, "classes"),
+                  where("schoolId", "==", schoolId),
+                  where("teacherId", "in", chunk),
+                )),
+              ]);
+              brAttSnap.docs.forEach(d => {
+                const data = d.data() as any;
+                bTotal++;
+                if ((data.status || "").toLowerCase() === "present") bPres++;
+              });
+              bClassTotal += brClSnap.size;
+            }
+            if (bTotal > 0) bAtt = Math.round((bPres / bTotal) * 100);
+            bClassCount = Math.round(bClassTotal / branchTIds.length);
+          }
+
+          setVsBranch([
+            {category:"Avg Score",  teacher:avg,            branchAvg:bAvg},
+            {category:"Pass Rate",  teacher:pass,           branchAvg:bPass},
+            {category:"Attendance", teacher:tAttPct,        branchAvg:bAtt},
+            {category:"Classes",    teacher:tClasses.length,branchAvg:Math.max(1,bClassCount)},
+          ]);
         }
       } catch(e) { console.error("TeacherProfile load error:",e); }
       setLoading(false);

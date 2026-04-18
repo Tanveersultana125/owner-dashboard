@@ -84,34 +84,32 @@ export default function StudentsIntelligence() {
       try {
         /* 1. branches subcollection: schools/{ownerUid}/branches */
         const ownerUid = auth.currentUser?.uid;
+        if (!ownerUid) { setLoading(false); return; }
+
         const branchMap = new Map<string, string>(); // branchId → branchName
-        if (ownerUid) {
-          const branchSnap = await getDocs(
-            collection(db, "schools", ownerUid, "branches")
-          );
-          branchSnap.docs.forEach(d => {
-            const data = d.data() as any;
-            const bname = data.name || data.branchName || "";
-            const bid   = data.branchId || d.id;
-            if (bname && bid) branchMap.set(bid, bname);
-          });
-        }
-        // also build schoolId→branchName for fallback (top-level schools docs)
-        const schoolMap = new Map<string, string>(); // schoolId → branchName (fallback)
-        const schoolsSnap = await getDocs(collection(db, "schools"));
-        schoolsSnap.docs.forEach(d => {
+        const branchSnap = await getDocs(
+          collection(db, "schools", ownerUid, "branches")
+        );
+        branchSnap.docs.forEach(d => {
           const data = d.data() as any;
-          const sname = data.name || data.schoolName || "";
-          if (sname) schoolMap.set(d.id, sname);
+          const bname = data.name || data.branchName || "";
+          const bid   = data.branchId || d.id;
+          if (bname && bid) branchMap.set(bid, bname);
         });
+        // schoolMap: fallback using this owner's own school doc only (no cross-tenant reads)
+        const schoolMap = new Map<string, string>(); // schoolId → branchName (fallback)
         setSchools(branchMap); // store branchId→name for dropdown
 
-        /* 2. all enrollments */
-        const enrollSnap = await getDocs(collection(db, "enrollments"));
+        /* 2. enrollments — scoped to this school */
+        const enrollSnap = await getDocs(
+          query(collection(db, "enrollments"), where("schoolId", "==", ownerUid))
+        );
         const enrollments = enrollSnap.docs.map(d => ({ _eid: d.id, ...d.data() as any }));
 
-        /* 3. test_scores: studentId → avg score */
-        const scoresSnap = await getDocs(collection(db, "test_scores"));
+        /* 3. test_scores: studentId → avg score — scoped */
+        const scoresSnap = await getDocs(
+          query(collection(db, "test_scores"), where("schoolId", "==", ownerUid))
+        );
         const scoreMap   = new Map<string, number[]>();
         scoresSnap.docs.forEach(d => {
           const data = d.data() as any;
@@ -123,8 +121,10 @@ export default function StudentsIntelligence() {
           }
         });
 
-        /* 4. attendance records */
-        const attSnap  = await getDocs(collection(db, "attendance"));
+        /* 4. attendance records — scoped */
+        const attSnap  = await getDocs(
+          query(collection(db, "attendance"), where("schoolId", "==", ownerUid))
+        );
 
         /* build student→grade and student→schoolId lookup from enrollments */
         const stuGradeMap  = new Map<string,string>();
@@ -171,8 +171,10 @@ export default function StudentsIntelligence() {
 
         setHeatRaw(heatMap);
 
-        /* 5. discipline: studentId → count */
-        const discSnap = await getDocs(collection(db, "discipline"));
+        /* 5. discipline: studentId → count — scoped */
+        const discSnap = await getDocs(
+          query(collection(db, "discipline"), where("schoolId", "==", ownerUid))
+        );
         const discMap  = new Map<string,number>();
         discSnap.docs.forEach(d => {
           const key = (d.data() as any).studentId || (d.data() as any).studentEmail || "";
@@ -225,6 +227,15 @@ export default function StudentsIntelligence() {
   const atRisk = useMemo(() => students.filter(s=>s.score>0 && s.score<50).length, [students]);
 
   const highPerformers = useMemo(() => students.filter(s=>s.score>=85).length, [students]);
+
+  /* New enrollments this term — students with createdAt in last 4 months */
+  const newThisTerm = useMemo(() => {
+    const cutoff = Date.now() - (120 * 24 * 60 * 60 * 1000);
+    return students.filter(s => {
+      const d = s.createdAt?.toDate?.();
+      return d && d.getTime() >= cutoff;
+    }).length;
+  }, [students]);
 
   /* ── grade distribution for pie ─────────────────── */
   const gradeDistData = useMemo(() => {
@@ -475,8 +486,8 @@ export default function StudentsIntelligence() {
           {/* ── Stat Cards ────────────────────────────── */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
             {[
-              { label:"Total Enrollment",   value: totalEnrollment.toLocaleString(), sub:`+124 this term`,        color:"text-green-600", route: "/students" },
-              { label:"Average Attendance", value:`${avgAttendance}%`,               sub:"+0.5% vs last month",   color:"text-green-600", route: "/students" },
+              { label:"Total Enrollment",   value: totalEnrollment.toLocaleString(), sub: newThisTerm > 0 ? `+${newThisTerm} this term` : "No new this term",     color:"text-green-600", route: "/students" },
+              { label:"Average Attendance", value:`${avgAttendance}%`,               sub: avgAttendance > 0 ? `Across ${totalEnrollment} students` : "No data yet", color:"text-green-600", route: "/students" },
               { label:"At-Risk Students",   value: atRisk.toString(),                sub:`${totalEnrollment>0?((atRisk/totalEnrollment)*100).toFixed(1):0}% of total`, color:"text-red-500", route: "/risks" },
               { label:"High Performers",    value: highPerformers.toString(),         sub:`${totalEnrollment>0?((highPerformers/totalEnrollment)*100).toFixed(1):0}% of total`, color:"text-green-600", route: "/students" },
             ].map(s=>(

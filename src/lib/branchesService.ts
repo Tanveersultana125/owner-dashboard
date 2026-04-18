@@ -185,12 +185,12 @@ export async function fetchBranchesComparison(): Promise<BranchComparisonData> {
       col: avgAtt >= 85 ? "text-[#22c55e]" : avgAtt >= 70 ? "text-[#f59e0b]" : "text-slate-400",
     },
     {
-      label: "Growth Rate",
+      label: "Activity Trend",
       value: bestGrowth && bestGrowth.growthRate !== 0
         ? `${bestGrowth.growthRate > 0 ? "+" : ""}${bestGrowth.growthRate}%`
         : "N/A",
       note: bestGrowth && bestGrowth.growthRate !== 0
-        ? `${bestGrowth.name.split(" ")[0]} fastest`
+        ? `${bestGrowth.name.split(" ")[0]} · attendance volume vs 6mo ago`
         : "Insufficient history",
       col: bestGrowth && bestGrowth.growthRate > 0 ? "text-[#22c55e]" : "text-[#f59e0b]",
     },
@@ -218,18 +218,25 @@ export async function fetchBranchDetail(branchId: string): Promise<BranchDetailD
   const bestBranchName = bestBranch?.name.split(" ")[0] || "Top";
   const isTopBranch = bestBranch?.id === summary.id;
 
-  // Comparison notes for KPI cards
+  // Comparison notes for KPI cards — all framed against real school/best-branch values
   const ahiDiff  = isTopBranch ? 0 : summary.ahi - bestBranch.ahi;
-  const feeDiff  = summary.feeCollection > 0 ? summary.feeCollection - 100 : 0;
   const passDiff = isTopBranch ? 0 : summary.passRate - bestBranch.passRate;
+  const feeDiff  = summary.feeCollection > 0 ? summary.feeCollection - schoolAvgFeeCollection : 0;
+  const bestFeeBranch = branches.filter(b => b.feeCollection > 0)
+    .reduce((a, b) => b.feeCollection > a.feeCollection ? b : a, branches.find(b => b.feeCollection > 0) || summary);
+  const isTopFee = bestFeeBranch.id === summary.id;
 
   const kpiNotes = {
     ahi: isTopBranch
       ? "Best performing branch"
       : `↓ ${Math.abs(ahiDiff)}% below ${bestBranchName}`,
-    fee: feeDiff >= 0
-      ? "Above target"
-      : `↓ ${Math.abs(feeDiff)}% below target`,
+    fee: summary.feeCollection === 0
+      ? "No fee data"
+      : isTopFee
+        ? "Highest collection"
+        : feeDiff >= 0
+          ? `↑ ${feeDiff}% vs school avg`
+          : `↓ ${Math.abs(feeDiff)}% vs school avg`,
     passRate: isTopBranch
       ? "Highest pass rate"
       : `↓ ${Math.abs(passDiff)}% below ${bestBranchName}`,
@@ -278,9 +285,10 @@ export async function fetchBranchDetail(branchId: string): Promise<BranchDetailD
   }
 
   if (summary.passRate > 0 && summary.passRate < 60) {
+    const failing = Math.round(summary.studentCount * (1 - summary.passRate / 100));
     actionPlan.push({
-      task: "Implement Math Remediation Program",
-      sub: `Target: ${Math.round(summary.studentCount * 0.07)} students • Timeline: 6 weeks • Budget: $8,000`,
+      task: "Academic Remediation Program",
+      sub: `${failing} student${failing !== 1 ? "s" : ""} below pass threshold — set up targeted tutoring and parent-teacher reviews`,
       priority: "High Priority", prColor: "bg-[#ef4444]",
     });
   } else if (summary.passRate > 0 && summary.passRate < schoolAvgPassRate) {
