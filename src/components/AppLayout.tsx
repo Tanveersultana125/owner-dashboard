@@ -249,18 +249,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         transition-all duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-auto
         ${isSidebarOpen ? "translate-x-0 shadow-xl" : "-translate-x-full"}
       `}>
-        <div className="flex items-center justify-between px-6 py-8 border-b border-slate-50 lg:justify-start lg:gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-[#1e3a8a] rounded-xl flex items-center justify-center shadow-lg shadow-blue-900/10 shrink-0">
-              <GraduationCap className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-lg font-bold text-[#1e294b] tracking-tight uppercase truncate">
-              {schoolData?.schoolName || "EDULLENT"}
-            </span>
+        <div className="flex items-center gap-3 px-5 lg:px-6 py-6 lg:py-8 border-b border-slate-50">
+          <div className="w-9 h-9 bg-[#1e3a8a] rounded-xl flex items-center justify-center shadow-lg shadow-blue-900/10 shrink-0">
+            <GraduationCap className="w-5 h-5 text-white" />
           </div>
+          <span
+            title={schoolData?.schoolName || "EDULLENT"}
+            className="flex-1 min-w-0 block text-[15px] lg:text-base font-bold text-[#1e294b] tracking-tight uppercase truncate leading-tight"
+          >
+            {schoolData?.schoolName || "EDULLENT"}
+          </span>
           <button
-            className="p-2 -mr-2 text-slate-400 hover:text-[#1e3a8a] lg:hidden transition-colors"
+            className="p-2 -mr-2 text-slate-400 hover:text-[#1e3a8a] lg:hidden transition-colors shrink-0"
             onClick={() => setIsSidebarOpen(false)}
+            aria-label="Close sidebar"
           >
             <X className="w-5 h-5" />
           </button>
