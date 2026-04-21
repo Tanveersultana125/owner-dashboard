@@ -383,7 +383,7 @@ export default function SettingsPage() {
   // ── Loading Skeleton ───────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div style={{ ...pageShellStyle, display:"flex", flexDirection:"column", gap:18, maxWidth:980, marginLeft:"auto", marginRight:"auto" }}>
+      <div style={{ ...pageShellStyle, display:"flex", flexDirection:"column", gap:18 }}>
         {[1, 2, 3].map(i => (
           <div key={i} style={{ background:"#fff", borderRadius:22, border:"0.5px solid rgba(0,85,255,.08)", boxShadow:SHADOW_SM, padding:"28px 28px", animation:"pulse 2s ease-in-out infinite" }}>
             <div style={{ height:14, width:140, background:"rgba(0,85,255,.08)", borderRadius:999, marginBottom:22 }}/>
@@ -405,7 +405,7 @@ export default function SettingsPage() {
   return (
     <>
       <DashGlobalStyles />
-      <div style={{ ...pageShellStyle, display:"flex", flexDirection:"column", gap:24, maxWidth:980, marginLeft:"auto", marginRight:"auto" }}>
+      <div style={{ ...pageShellStyle, display:"flex", flexDirection:"column", gap:24 }}>
 
       <PageHead
         icon={SettingsIcon}
