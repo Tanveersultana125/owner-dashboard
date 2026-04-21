@@ -9,9 +9,16 @@ import {
   User, Mail, Phone, MapPin, Building2,
   Bell, BellOff, Clock, Calendar, DollarSign, MessageCircle,
   Globe, Save, Loader2, CheckCircle2, AlertCircle,
-  Camera, Upload, Trash2, Image, Download, FileText, Activity
+  Camera, Upload, Trash2, Image, Download, FileText, Activity,
+  Settings as SettingsIcon, Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  B1, T1, T3, T4, GREEN, RED, GOLD, VIOLET,
+  GRAD_PRIMARY, GRAD_BLUE, GRAD_GREEN, GRAD_VIOLET, GRAD_GOLD, GRAD_RED,
+  SHADOW_SM, SHADOW_BTN, pageShellStyle,
+  DashGlobalStyles, PageHead, DarkHero, AIInsightCard,
+} from "@/lib/dashboardTokens";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface RiskThresholds {
@@ -376,13 +383,13 @@ export default function SettingsPage() {
   // ── Loading Skeleton ───────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="max-w-[900px] mx-auto space-y-6">
+      <div style={{ ...pageShellStyle, display:"flex", flexDirection:"column", gap:18, maxWidth:980, marginLeft:"auto", marginRight:"auto" }}>
         {[1, 2, 3].map(i => (
-          <div key={i} className="bg-white rounded-[32px] border border-slate-100 p-10 animate-pulse">
-            <div className="h-4 w-32 bg-slate-100 rounded-full mb-8" />
-            <div className="grid grid-cols-2 gap-6">
+          <div key={i} style={{ background:"#fff", borderRadius:22, border:"0.5px solid rgba(0,85,255,.08)", boxShadow:SHADOW_SM, padding:"28px 28px", animation:"pulse 2s ease-in-out infinite" }}>
+            <div style={{ height:14, width:140, background:"rgba(0,85,255,.08)", borderRadius:999, marginBottom:22 }}/>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(2, 1fr)", gap:16 }}>
               {[1, 2, 3, 4].map(j => (
-                <div key={j} className="h-12 bg-slate-50 rounded-2xl" />
+                <div key={j} style={{ height:46, background:"rgba(0,85,255,.04)", borderRadius:14 }}/>
               ))}
             </div>
           </div>
@@ -391,14 +398,53 @@ export default function SettingsPage() {
     );
   }
 
-  return (
-    <div className="max-w-[900px] mx-auto space-y-8 animate-in fade-in duration-500">
+  // Count enabled notifications for summary
+  const enabledNotifs = Object.values(settings.notifications).filter(Boolean).length;
+  const totalNotifs   = Object.keys(settings.notifications).length;
 
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl lg:text-3xl font-black text-[#1e293b] tracking-tight">Settings</h1>
-        <p className="text-slate-400 text-sm font-medium mt-1">Manage your profile and school preferences</p>
-      </div>
+  return (
+    <>
+      <DashGlobalStyles />
+      <div style={{ ...pageShellStyle, display:"flex", flexDirection:"column", gap:24, maxWidth:980, marginLeft:"auto", marginRight:"auto" }}>
+
+      <PageHead
+        icon={SettingsIcon}
+        title="Settings"
+        subtitle="Manage your profile and school preferences"
+        right={
+          saveStatus === "success" ? (
+            <div style={{
+              display:"inline-flex", alignItems:"center", gap:6,
+              padding:"8px 14px", borderRadius:12,
+              background:"rgba(0,200,83,.10)", color:GREEN, border:`0.5px solid ${GREEN}33`,
+              fontSize:10, fontWeight:800, letterSpacing:"0.10em", textTransform:"uppercase",
+            }}>
+              <CheckCircle2 size={13}/> Saved
+            </div>
+          ) : saveStatus === "error" ? (
+            <div style={{
+              display:"inline-flex", alignItems:"center", gap:6,
+              padding:"8px 14px", borderRadius:12,
+              background:"rgba(255,51,85,.10)", color:RED, border:`0.5px solid ${RED}33`,
+              fontSize:10, fontWeight:800, letterSpacing:"0.10em", textTransform:"uppercase",
+            }}>
+              <AlertCircle size={13}/> Error
+            </div>
+          ) : null
+        }
+      />
+
+      <DarkHero
+        icon={SettingsIcon}
+        eyebrow={<><Sparkles size={11} style={{ display:"inline", marginRight:4 }}/> Configuration Center</> as any}
+        title={settings.schoolName || "Configure"}
+        subtitle={`${settings.ownerName ? settings.ownerName + " · " : ""}${enabledNotifs}/${totalNotifs} notifications active · ${settings.timezone.split(" ")[0]}`}
+        stats={[
+          { label:"Timezone",  value: settings.timezone.match(/\(([^)]+)\)/)?.[1] || "—" },
+          { label:"Currency",  value: settings.currency.match(/\(([^)]+)\)/)?.[1] || settings.currency },
+          { label:"Language",  value: settings.language.slice(0, 8) },
+        ]}
+      />
 
       {/* ── Section 1: Owner Profile ─────────────────────────────────────── */}
       <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-8 lg:p-10">
@@ -826,6 +872,16 @@ export default function SettingsPage() {
           </button>
         </div>
       </div>
-    </div>
+
+      <AIInsightCard
+        title="Settings Intelligence"
+        items={[
+          { label:"Profile Setup", value: settings.schoolName && settings.ownerName ? "Complete" : "Incomplete", sub: settings.logoUrl ? "Logo uploaded" : "No logo yet" },
+          { label:"Notifications", value: `${enabledNotifs}/${totalNotifs} enabled`, sub: settings.notifications.whatsappAlerts ? "WhatsApp active" : "Email only" },
+          { label:"Risk Thresholds", value: `${settings.thresholds.attendanceCritical}% / ${settings.thresholds.attendanceWarning}%`, sub: `${settings.thresholds.feeOverdueDays}d fee window` },
+        ]}
+      />
+      </div>
+    </>
   );
 }

@@ -2,22 +2,28 @@ import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Activity, Clock, Download, Loader2, RefreshCcw,
+  Building2, UserCog, FileCog, Bell, Settings, FileDown, Sparkles,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import {
   fetchAuditLog, AuditEntry, AuditAction, ACTION_CONFIG,
 } from "@/lib/auditService";
 import { toast } from "sonner";
+import {
+  B1, T1, T3, T4, GREEN, RED, GOLD, VIOLET,
+  GRAD_PRIMARY, GRAD_BLUE, GRAD_GREEN, GRAD_VIOLET, GRAD_GOLD, GRAD_RED, GRAD_ORANGE,
+  SHADOW_SM, SHADOW_BTN, pageShellStyle,
+  DashGlobalStyles, PageHead, StatTile, DarkHero, Card3D, AIInsightCard,
+} from "@/lib/dashboardTokens";
 
 // ── Filter options ────────────────────────────────────────────────────────────
-const FILTERS: { value: string; label: string }[] = [
-  { value: "all",               label: "All Activity" },
-  { value: "branch",            label: "Branches" },
-  { value: "principal",         label: "Principals" },
-  { value: "deo",               label: "DEO Changes" },
-  { value: "alert",             label: "Alerts" },
-  { value: "settings_saved",    label: "Settings" },
-  { value: "data_exported",     label: "Exports" },
+const FILTERS: { value: string; label: string; icon: any; grad: string }[] = [
+  { value: "all",            label: "All Activity", icon: Activity,   grad: GRAD_BLUE },
+  { value: "branch",         label: "Branches",     icon: Building2,  grad: GRAD_VIOLET },
+  { value: "principal",      label: "Principals",   icon: UserCog,    grad: GRAD_GREEN },
+  { value: "deo",            label: "DEO Changes",  icon: FileCog,    grad: GRAD_GOLD },
+  { value: "alert",          label: "Alerts",       icon: Bell,       grad: GRAD_RED },
+  { value: "settings_saved", label: "Settings",     icon: Settings,   grad: GRAD_ORANGE },
+  { value: "data_exported",  label: "Exports",      icon: FileDown,   grad: GRAD_PRIMARY },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -60,7 +66,6 @@ function exportCSV(entries: AuditEntry[]) {
   toast.success("Audit log exported!");
 }
 
-// ── Group entries by date ──────────────────────────────────────────────────────
 function groupByDate(entries: AuditEntry[]): { date: string; items: AuditEntry[] }[] {
   const map = new Map<string, AuditEntry[]>();
   entries.forEach(e => {
@@ -88,162 +93,223 @@ export default function AuditLogPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  // ── Filter logic ─────────────────────────────────────────────────────────
   const filtered = filter === "all"
     ? entries
     : entries.filter(e => e.action.startsWith(filter));
 
   const groups = groupByDate(filtered);
 
+  const branchCount    = entries.filter(e => e.action.startsWith("branch")).length;
+  const principalCount = entries.filter(e => e.action.startsWith("principal")).length;
+  const deoCount       = entries.filter(e => e.action.startsWith("deo")).length;
+  const alertCount     = entries.filter(e => e.action.startsWith("alert")).length;
+
   return (
-    <div className="max-w-[860px] mx-auto space-y-8 animate-in fade-in duration-500 pb-16">
+    <>
+      <DashGlobalStyles />
+      <div style={{ ...pageShellStyle, display:"flex", flexDirection:"column", gap:24 }}>
 
-      {/* ── Header ─────────────────────────────────────────────��──────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-black text-[#1e294b] tracking-tight">Activity Log</h1>
-          <p className="text-slate-400 text-sm font-medium mt-1">
-            Complete audit trail of all management actions in your school network
-          </p>
-        </div>
-        <div className="flex items-center gap-3 shrink-0">
-          <Button
-            variant="outline"
-            onClick={load}
-            className="h-10 px-4 rounded-xl border-slate-200 text-xs font-bold gap-2 hover:bg-slate-50"
-          >
-            <RefreshCcw className="w-3.5 h-3.5" /> Refresh
-          </Button>
-          <Button
-            onClick={() => exportCSV(filtered)}
-            className="h-10 px-4 rounded-xl bg-[#1e3a8a] text-white text-xs font-bold gap-2 shadow-lg shadow-blue-900/10"
-          >
-            <Download className="w-3.5 h-3.5" /> Export CSV
-          </Button>
-        </div>
-      </div>
-
-      {/* ── Stats ─────────────────────────────────────────────────────────── */}
-      {!loading && entries.length > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[
-            { label: "Total Actions",   value: entries.length,                                         color: "text-[#1e3a8a]" },
-            { label: "Branches",        value: entries.filter(e => e.action.startsWith("branch")).length,    color: "text-blue-500" },
-            { label: "Principals",      value: entries.filter(e => e.action.startsWith("principal")).length, color: "text-emerald-500" },
-            { label: "DEO Changes",     value: entries.filter(e => e.action.startsWith("deo")).length,       color: "text-amber-500" },
-          ].map((stat, i) => (
-            <div
-              key={i}
-              onClick={() => navigate("/audit")}
-              role="button"
-              tabIndex={0}
-              className="clickable-card bg-white border border-slate-100 rounded-[1.5rem] p-5"
-            >
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{stat.label}</p>
-              <p className={`text-3xl font-black ${stat.color}`}>{stat.value}</p>
+        <PageHead
+          icon={Activity}
+          title="Activity Log"
+          subtitle="Complete audit trail of all management actions"
+          right={
+            <div style={{ display:"flex", gap:8 }}>
+              <button
+                onClick={load}
+                className="dash-btn"
+                style={{
+                  display:"inline-flex", alignItems:"center", gap:6,
+                  padding:"10px 14px", borderRadius:12,
+                  background:"#fff", color:T3, border:"0.5px solid rgba(0,85,255,.12)",
+                  fontSize:11, fontWeight:800, letterSpacing:"0.08em", textTransform:"uppercase",
+                  cursor:"pointer", boxShadow:SHADOW_SM, fontFamily:"inherit",
+                }}
+              >
+                <RefreshCcw size={13}/> Refresh
+              </button>
+              <button
+                onClick={() => exportCSV(filtered)}
+                className="dash-btn"
+                style={{
+                  display:"inline-flex", alignItems:"center", gap:6,
+                  padding:"10px 16px", borderRadius:12,
+                  background:GRAD_PRIMARY, color:"#fff",
+                  fontSize:11, fontWeight:800, letterSpacing:"0.08em", textTransform:"uppercase",
+                  border:"none", cursor:"pointer", boxShadow:SHADOW_BTN, fontFamily:"inherit",
+                }}
+              >
+                <Download size={13}/> Export CSV
+              </button>
             </div>
-          ))}
-        </div>
-      )}
+          }
+        />
 
-      {/* ── Filter tabs ───────────────────────────────────────────────────── */}
-      <div className="flex flex-wrap gap-2">
-        {FILTERS.map(opt => (
-          <button
-            key={opt.value}
-            onClick={() => setFilter(opt.value)}
-            className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all ${
-              filter === opt.value
-                ? "bg-[#1e3a8a] text-white border-[#1e3a8a] shadow-lg shadow-blue-900/10"
-                : "bg-white text-slate-500 border-slate-200 hover:border-slate-300 hover:bg-slate-50"
-            }`}
-          >
-            {opt.label}
-          </button>
-        ))}
-      </div>
+        {!loading && entries.length > 0 && (
+          <DarkHero
+            icon={Activity}
+            eyebrow={<><Sparkles size={11} style={{ display:"inline", marginRight:4 }}/> Audit Intelligence</> as any}
+            title={entries.length.toString()}
+            subtitle={`Actions tracked across ${groups.length} day${groups.length!==1?"s":""} · ${filtered.length === entries.length ? "all activity" : `${filtered.length} filtered`}`}
+            stats={[
+              { label:"Branches",   value: branchCount.toString() },
+              { label:"Principals", value: principalCount.toString() },
+              { label:"DEO",        value: deoCount.toString() },
+            ]}
+          />
+        )}
 
-      {/* ── Feed ──────────────────────────────────────────────────────────── */}
-      {loading ? (
-        <div className="bg-white rounded-[2rem] border border-slate-100 flex items-center justify-center h-48 gap-3">
-          <Loader2 className="w-6 h-6 animate-spin text-[#1e3a8a]" />
-          <p className="text-sm font-bold text-slate-400">Loading activity...</p>
+        {/* Stats */}
+        {!loading && entries.length > 0 && (
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(4, 1fr)", gap:16 }}>
+            <StatTile label="Total Actions" value={entries.length.toString()} sub="All time"            grad={GRAD_BLUE}   icon={Activity}   onClick={()=>setFilter("all")} />
+            <StatTile label="Branches"      value={branchCount.toString()}   sub="Branch changes"      grad={GRAD_VIOLET} icon={Building2}  onClick={()=>setFilter("branch")} />
+            <StatTile label="Principals"    value={principalCount.toString()} sub="Principal actions" grad={GRAD_GREEN}  icon={UserCog}    onClick={()=>setFilter("principal")} />
+            <StatTile label="DEO Changes"   value={deoCount.toString()}      sub="DEO lifecycle"       grad={GRAD_GOLD}   icon={FileCog}    onClick={()=>setFilter("deo")} />
+          </div>
+        )}
+
+        {/* Filter chips */}
+        <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
+          {FILTERS.map(opt => {
+            const active = filter === opt.value;
+            const Icon = opt.icon;
+            return (
+              <button
+                key={opt.value}
+                onClick={() => setFilter(opt.value)}
+                className="dash-btn"
+                style={{
+                  display:"inline-flex", alignItems:"center", gap:6,
+                  padding:"9px 16px", borderRadius:12,
+                  background: active ? opt.grad : "#fff",
+                  color: active ? "#fff" : T3,
+                  fontSize:11, fontWeight:800, letterSpacing:"0.08em", textTransform:"uppercase",
+                  border: active ? "none" : "0.5px solid rgba(0,85,255,.12)",
+                  boxShadow: active ? SHADOW_BTN : SHADOW_SM,
+                  cursor:"pointer", fontFamily:"inherit",
+                }}
+              >
+                <Icon size={12}/> {opt.label}
+              </button>
+            );
+          })}
         </div>
-      ) : filtered.length === 0 ? (
-        <div className="bg-white rounded-[2rem] border border-slate-100 flex flex-col items-center justify-center h-48 gap-3">
-          <Activity className="w-10 h-10 text-slate-200" />
-          <p className="text-sm font-bold text-slate-400">No activity recorded yet</p>
-          <p className="text-xs text-slate-300 text-center max-w-xs">
-            Actions like adding branches, inviting principals, and resolving alerts will appear here automatically.
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {groups.map(group => (
-            <div key={group.date}>
-              {/* Date divider */}
-              <div className="flex items-center gap-4 mb-4">
-                <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
-                  {group.date}
-                </span>
-                <div className="flex-1 h-px bg-slate-100" />
+
+        {/* Feed */}
+        {loading ? (
+          <Card3D padding="40px 24px">
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:10 }}>
+              <Loader2 className="animate-spin" size={22} color={B1}/>
+              <p style={{ fontSize:13, fontWeight:700, color:T3, margin:0 }}>Loading activity...</p>
+            </div>
+          </Card3D>
+        ) : filtered.length === 0 ? (
+          <Card3D padding="48px 24px">
+            <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:10 }}>
+              <div style={{ width:60, height:60, borderRadius:18, background:"#F5F9FF", border:"0.5px solid rgba(0,85,255,.1)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                <Activity size={28} color={T4}/>
               </div>
+              <p style={{ fontSize:13, fontWeight:800, color:T3, margin:0 }}>No activity recorded yet</p>
+              <p style={{ fontSize:11, fontWeight:500, color:T4, margin:0, textAlign:"center", maxWidth:360, lineHeight:1.5 }}>
+                Actions like adding branches, inviting principals, and resolving alerts will appear here automatically.
+              </p>
+            </div>
+          </Card3D>
+        ) : (
+          <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
+            {groups.map(group => (
+              <div key={group.date}>
+                <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:12 }}>
+                  <span style={{ fontSize:10, fontWeight:800, color:T4, letterSpacing:"0.14em", textTransform:"uppercase", whiteSpace:"nowrap" }}>
+                    {group.date}
+                  </span>
+                  <div style={{ flex:1, height:1, background:"rgba(0,85,255,.08)" }}/>
+                </div>
 
-              {/* Entries for this date */}
-              <div className="bg-white rounded-[1.5rem] border border-slate-100 overflow-hidden">
-                {group.items.map((entry, i) => {
-                  const cfg = ACTION_CONFIG[entry.action] ?? {
-                    icon: "📝", label: entry.action,
-                    color: "bg-slate-50 text-slate-600 border-slate-100",
-                  };
-                  return (
-                    <div
-                      key={entry.id}
-                      className={`flex items-start gap-4 px-6 py-4 hover:bg-slate-50/50 transition-colors ${
-                        i < group.items.length - 1 ? "border-b border-slate-50" : ""
-                      }`}
-                    >
-                      {/* Icon */}
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-base shrink-0 border ${cfg.color}`}>
-                        {cfg.icon}
-                      </div>
-
-                      {/* Content */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="min-w-0">
-                            <p className="text-sm font-bold text-[#1e294b] leading-tight">{entry.label}</p>
-                            {entry.details && (
-                              <p className="text-xs text-slate-400 font-medium mt-0.5 truncate">{entry.details}</p>
-                            )}
-                          </div>
-                          <div className="text-right shrink-0">
-                            <p className="text-[11px] font-bold text-slate-400 flex items-center gap-1 justify-end">
-                              <Clock className="w-3 h-3" />
-                              {timeAgo(entry.ts)}
-                            </p>
-                            <p className="text-[10px] text-slate-300 mt-0.5">{timeAbsolute(entry.ts)}</p>
-                          </div>
+                <Card3D padding={0} style={{ overflow:"hidden" }}>
+                  {group.items.map((entry, i) => {
+                    const cfg = ACTION_CONFIG[entry.action] ?? {
+                      icon: "📝", label: entry.action,
+                      color: "bg-slate-50 text-slate-600 border-slate-100",
+                    };
+                    const isLast = i >= group.items.length - 1;
+                    return (
+                      <div
+                        key={entry.id}
+                        className="dash-row"
+                        style={{
+                          display:"flex", alignItems:"flex-start", gap:14,
+                          padding:"14px 20px",
+                          borderBottom: isLast ? "none" : "0.5px solid rgba(0,85,255,.05)",
+                        }}
+                      >
+                        <div
+                          style={{
+                            width:40, height:40, borderRadius:12,
+                            display:"flex", alignItems:"center", justifyContent:"center",
+                            fontSize:18,
+                            background:"#F5F9FF", border:"0.5px solid rgba(0,85,255,.1)",
+                            flexShrink:0,
+                          }}
+                        >
+                          {cfg.icon}
                         </div>
-                        <span className={`inline-flex mt-1.5 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest border ${cfg.color}`}>
-                          {cfg.label}
-                        </span>
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:14 }}>
+                            <div style={{ minWidth:0 }}>
+                              <p style={{ fontSize:13, fontWeight:800, color:T1, margin:0, letterSpacing:"-0.2px", lineHeight:1.4 }}>{entry.label}</p>
+                              {entry.details && (
+                                <p style={{ fontSize:11, fontWeight:500, color:T3, margin:"3px 0 0 0", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+                                  {entry.details}
+                                </p>
+                              )}
+                            </div>
+                            <div style={{ textAlign:"right", flexShrink:0 }}>
+                              <p style={{ fontSize:10, fontWeight:800, color:T3, display:"flex", alignItems:"center", gap:4, justifyContent:"flex-end", margin:0 }}>
+                                <Clock size={10}/> {timeAgo(entry.ts)}
+                              </p>
+                              <p style={{ fontSize:9, fontWeight:600, color:T4, margin:"2px 0 0 0" }}>{timeAbsolute(entry.ts)}</p>
+                            </div>
+                          </div>
+                          <span
+                            style={{
+                              display:"inline-flex", marginTop:6,
+                              fontSize:9, fontWeight:800, padding:"3px 8px", borderRadius:999,
+                              background:"rgba(0,85,255,.08)", color:B1,
+                              letterSpacing:"0.12em", textTransform:"uppercase",
+                            }}
+                          >
+                            {cfg.label}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </Card3D>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
 
-      {!loading && filtered.length > 0 && (
-        <p className="text-center text-xs text-slate-300 font-medium pb-4">
-          Showing {filtered.length} {entries.length >= 200 ? "of 200+ " : ""}entries
-          {filtered.length !== entries.length ? ` (filtered from ${entries.length} total)` : ""}
-        </p>
-      )}
-    </div>
+        {!loading && filtered.length > 0 && (
+          <p style={{ textAlign:"center", fontSize:10, fontWeight:700, color:T4, letterSpacing:"0.10em", textTransform:"uppercase", margin:"6px 0" }}>
+            Showing {filtered.length} {entries.length >= 200 ? "of 200+ " : ""}entries
+            {filtered.length !== entries.length ? ` (filtered from ${entries.length})` : ""}
+          </p>
+        )}
+
+        {!loading && entries.length > 0 && (
+          <AIInsightCard
+            title="Audit Intelligence Summary"
+            items={[
+              { label:"Activity Volume", value: `${entries.length} action${entries.length!==1?"s":""}`, sub: `${groups.length} day${groups.length!==1?"s":""} of records` },
+              { label:"Most Active",     value: branchCount > principalCount && branchCount > deoCount ? "Branches" : principalCount > deoCount ? "Principals" : deoCount > 0 ? "DEO" : "Mixed", sub: "Highest change volume" },
+              { label:"Alert Signal",    value: alertCount > 0 ? `${alertCount} alert${alertCount!==1?"s":""}` : "No alerts", sub: alertCount > 0 ? "Review context" : "All quiet" },
+            ]}
+          />
+        )}
+      </div>
+    </>
   );
 }

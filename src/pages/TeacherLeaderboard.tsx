@@ -8,6 +8,12 @@ import {
   TrendingUp, Filter, ChevronDown, X, Search, Sparkles,
 } from "lucide-react";
 import {
+  B1, T1, T3, T4, GREEN, RED, GOLD, VIOLET,
+  GRAD_PRIMARY, GRAD_BLUE, GRAD_GREEN, GRAD_VIOLET, GRAD_GOLD, GRAD_RED,
+  SHADOW_SM, SHADOW_BTN, pageShellStyle,
+  DashGlobalStyles, PageHead, StatTile, DarkHero, Card3D, AIInsightCard,
+} from "@/lib/dashboardTokens";
+import {
   scoreTeachers, TeacherScore, TeacherDoc, ScoreDoc,
   AttendanceDoc, AssignmentDoc, TeacherAttendanceDoc,
 } from "@/lib/teacherScorer";
@@ -176,75 +182,86 @@ export default function TeacherLeaderboard() {
   // ═══════════════════════════════════════════════════════════════════════
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-[#1e3a8a]" />
+      <div style={{ ...pageShellStyle, display:"flex", alignItems:"center", justifyContent:"center" }}>
+        <Loader2 className="animate-spin" size={32} color={B1}/>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 pb-10 animate-in fade-in duration-300">
-      {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-[#1e294b] tracking-tight flex items-center gap-2">
-            <Trophy className="w-7 h-7 text-amber-500" /> Teacher Leaderboard
-          </h1>
-          <p className="text-slate-500 text-xs md:text-sm font-medium mt-0.5">
-            Top performers across your branches — auto-ranked by student outcomes + engagement
-          </p>
-        </div>
+    <>
+      <DashGlobalStyles />
+      <div style={{ ...pageShellStyle, display:"flex", flexDirection:"column", gap:24 }}>
 
-        {/* Time range + filters */}
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="inline-flex items-center bg-slate-100 rounded-xl p-1">
-            {(["term", "month", "all"] as TimeRange[]).map((r) => (
-              <button
-                key={r}
-                onClick={() => setTimeRange(r)}
-                className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
-                  timeRange === r ? "bg-white text-[#1e3a8a] shadow-sm" : "text-slate-500"
-                }`}
-              >
-                {r === "term" ? "This Term" : r === "month" ? "This Month" : "All Time"}
-              </button>
-            ))}
-          </div>
-          <div className="relative">
-            <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-            <select
-              value={branchFilter}
-              onChange={(e) => setBranchFilter(e.target.value)}
-              className="appearance-none border border-slate-200 rounded-xl pl-9 pr-10 py-2 text-xs font-bold text-slate-600 bg-white outline-none focus:ring-2 focus:ring-[#1e3a8a]/10 min-w-[180px]"
-            >
-              {branchOptions.map((b) => (
-                <option key={b} value={b}>{b === "All" ? "All Branches" : branchMap.get(b) || b}</option>
-              ))}
-            </select>
-            <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-          </div>
-        </div>
-      </div>
-
-      {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: "Total Teachers", value: stats.total,                     icon: Users,     color: "text-blue-600",    bg: "bg-blue-50",    note: "In scope" },
-          { label: "Avg Performance", value: `${stats.avg.toFixed(1)}%`,      icon: TrendingUp, color: "text-emerald-600", bg: "bg-emerald-50", note: "Across all teachers" },
-          { label: "Active Teachers", value: stats.active,                    icon: Sparkles,  color: "text-violet-600",  bg: "bg-violet-50",  note: "With recent data" },
-          { label: "Top Performer",   value: stats.top ? `${stats.top.composite.toFixed(0)}%` : "—", icon: Crown, color: "text-amber-600",   bg: "bg-amber-50",   note: stats.top?.teacher.name || "No teachers yet" },
-        ].map((s) => (
-          <div key={s.label} className="clickable-card bg-white p-4 md:p-5 rounded-2xl border border-slate-100 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">{s.label}</p>
-              <div className={`w-8 h-8 rounded-lg ${s.bg} flex items-center justify-center`}>
-                <s.icon className={`w-4 h-4 ${s.color}`} />
-              </div>
+      <PageHead
+        icon={Trophy}
+        title="Teacher Leaderboard"
+        subtitle="Auto-ranked by student outcomes + engagement"
+        right={
+          <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+            <div style={{ display:"inline-flex", padding:4, borderRadius:14, background:"#fff", border:"0.5px solid rgba(0,85,255,.12)", boxShadow:SHADOW_SM }}>
+              {(["term", "month", "all"] as TimeRange[]).map((r) => {
+                const active = timeRange === r;
+                return (
+                  <button
+                    key={r}
+                    onClick={() => setTimeRange(r)}
+                    className="dash-btn"
+                    style={{
+                      padding:"7px 14px", borderRadius:10,
+                      background: active ? GRAD_PRIMARY : "transparent",
+                      color: active ? "#fff" : T3,
+                      fontSize:10, fontWeight:800, letterSpacing:"0.10em", textTransform:"uppercase",
+                      border:"none", cursor:"pointer", fontFamily:"inherit",
+                      boxShadow: active ? SHADOW_BTN : "none",
+                    }}
+                  >
+                    {r === "term" ? "This Term" : r === "month" ? "This Month" : "All Time"}
+                  </button>
+                );
+              })}
             </div>
-            <h3 className="text-2xl md:text-3xl font-extrabold text-[#1e294b] tracking-tight mb-1">{s.value}</h3>
-            <p className={`text-[10px] font-bold ${s.color} truncate`}>{s.note}</p>
+            <div style={{ position:"relative" }}>
+              <Building2 size={14} color={T4} style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", pointerEvents:"none" }}/>
+              <select
+                value={branchFilter}
+                onChange={(e) => setBranchFilter(e.target.value)}
+                style={{
+                  appearance:"none", padding:"10px 36px 10px 36px",
+                  borderRadius:14, border:"0.5px solid rgba(0,85,255,.12)",
+                  background:"#fff", boxShadow:SHADOW_SM,
+                  fontSize:12, fontWeight:700, color:T3,
+                  outline:"none", fontFamily:"inherit", cursor:"pointer", minWidth:180,
+                }}
+              >
+                {branchOptions.map((b) => (
+                  <option key={b} value={b}>{b === "All" ? "All Branches" : branchMap.get(b) || b}</option>
+                ))}
+              </select>
+              <ChevronDown size={13} color={T4} style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", pointerEvents:"none" }}/>
+            </div>
           </div>
-        ))}
+        }
+      />
+
+      <DarkHero
+        icon={Award}
+        eyebrow={<><Sparkles size={11} style={{ display:"inline", marginRight:4 }}/> Performance Intelligence</> as any}
+        title={stats.top ? `${stats.top.composite.toFixed(0)}%` : "—"}
+        subtitle={stats.top ? `${stats.top.teacher.name} leads · ${stats.total} teacher${stats.total!==1?"s":""} ranked · ${stats.avg.toFixed(1)}% avg performance` : "No data yet — rankings appear once academic data is recorded"}
+        stats={[
+          { label:"Total",  value: stats.total.toString() },
+          { label:"Active", value: stats.active.toString() },
+          { label:"Avg",    value: `${stats.avg.toFixed(0)}%` },
+        ]}
+      />
+
+      {/* Bright Stat Grid */}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(4, 1fr)", gap:16 }}>
+        <StatTile label="Total Teachers"   value={stats.total.toString()}                                        sub="In scope"                          grad={GRAD_BLUE}   icon={Users} />
+        <StatTile label="Avg Performance"  value={`${stats.avg.toFixed(1)}%`}                                    sub="Across all teachers"                grad={GRAD_GREEN}  icon={TrendingUp} />
+        <StatTile label="Active Teachers"  value={stats.active.toString()}                                       sub="With recent data"                   grad={GRAD_VIOLET} icon={Sparkles} />
+        <StatTile label="Top Performer"    value={stats.top ? `${stats.top.composite.toFixed(0)}%` : "—"}        sub={stats.top?.teacher.name || "No data yet"} grad={GRAD_GOLD} icon={Crown} onClick={()=>stats.top && setSelected(stats.top)} />
       </div>
 
       {/* Empty state */}
@@ -363,7 +380,19 @@ export default function TeacherLeaderboard() {
           onClose={() => setSelected(null)}
         />
       )}
-    </div>
+
+      {ranked.length > 0 && (
+        <AIInsightCard
+          title="Leaderboard Intelligence"
+          items={[
+            { label:"Top Signal",       value: stats.top ? `${stats.top.teacher.name}` : "No top yet", sub: stats.top ? `${stats.top.composite.toFixed(0)}% composite` : "Awaiting data" },
+            { label:"Team Pulse",       value: `${stats.avg.toFixed(0)}% avg`, sub: stats.avg >= 70 ? "Healthy team" : stats.avg >= 50 ? "Room to grow" : "Needs focus" },
+            { label:"Data Coverage",    value: `${stats.active}/${stats.total} active`, sub: stats.active < stats.total ? `${stats.total - stats.active} without recent data` : "All teachers tracked" },
+          ]}
+        />
+      )}
+      </div>
+    </>
   );
 }
 

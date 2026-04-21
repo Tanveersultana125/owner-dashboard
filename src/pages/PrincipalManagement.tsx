@@ -5,8 +5,15 @@ import {
   Building2, Search, X, Send, Shield, RefreshCcw, Ban,
   ChevronRight, AlertTriangle, Phone, MapPin, Calendar,
   Plus, Edit3, Trash2, Globe, Hash, Loader2, Download,
-  FileSpreadsheet, CheckCheck, RotateCcw, AlertCircle
+  FileSpreadsheet, CheckCheck, RotateCcw, AlertCircle,
+  Sparkles,
 } from "lucide-react";
+import {
+  B1, T1, T3, T4, GREEN, RED, GOLD, VIOLET,
+  GRAD_PRIMARY, GRAD_BLUE, GRAD_GREEN, GRAD_VIOLET, GRAD_GOLD, GRAD_RED,
+  SHADOW_SM, SHADOW_BTN, pageShellStyle,
+  DashGlobalStyles, PageHead, StatTile, DarkHero, AIInsightCard,
+} from "@/lib/dashboardTokens";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { db, auth, storage } from "@/lib/firebase";
@@ -407,81 +414,129 @@ export default function PrincipalManagement() {
     }
   };
 
-  return (
-    <div className="space-y-10 max-w-[1600px] mx-auto animate-in fade-in duration-500 pb-10">
-      {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold text-[#111827] tracking-tight">Management Console</h1>
-          <p className="text-slate-400 font-medium text-sm">Manage branches & assign principals to control dashboard access</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Button
-            onClick={() => setShowAddBranchModal(true)}
-            variant="outline"
-            className="h-12 rounded-xl px-6 border-slate-200 font-bold text-sm text-slate-600 hover:bg-slate-50 flex items-center gap-2"
-          >
-            <Building2 className="w-4 h-4" /> Add Branch
-          </Button>
-          <Button
-            onClick={() => setShowBulkModal(true)}
-            variant="outline"
-            className="h-12 rounded-xl px-6 border-indigo-200 bg-indigo-50/50 text-indigo-700 font-bold text-sm hover:bg-indigo-100 flex items-center gap-2"
-          >
-            <Hash className="w-4 h-4" /> Bulk Invite
-          </Button>
-          <Button
-            onClick={() => setShowInviteModal(true)}
-            className="bg-[#1e294b] hover:bg-[#1e3a8a] text-white font-bold h-12 rounded-xl px-8 shadow-lg shadow-blue-900/10 flex items-center gap-2"
-          >
-            <UserPlus className="w-4 h-4" /> Invite Principal
-          </Button>
-        </div>
-      </div>
+  const totalBranches = branches.length;
+  const totalPrincipals = principals.length;
+  const activePrincipals = principals.filter(p => p.status === 'Active').length;
+  const pendingInvites = principals.filter(p => p.status === 'Invited').length;
+  const unassignedBranches = branches.filter(b => !principals.find(p => p.branch === b.name && p.status === 'Active')).length;
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
-        {[
-          { label: "Total Branches", value: branches.length.toString(), note: `${branches.filter(b => b.status === 'Active').length} active`, col: "text-blue-500" },
-          { label: "Total Principals", value: principals.length.toString(), note: "Across network", col: "text-slate-400" },
-          { label: "Active Principals", value: principals.filter(p => p.status === 'Active').length.toString(), note: "Currently managing", col: "text-emerald-500" },
-          { label: "Pending Invites", value: principals.filter(p => p.status === 'Invited').length.toString(), note: "Awaiting acceptance", col: "text-amber-500" },
-          { label: "Unassigned", value: branches.filter(b => !principals.find(p => p.branch === b.name && p.status === 'Active')).length.toString(), note: "Branches need principal", col: "text-rose-500" },
-        ].map((stat, i) => (
-          <div key={i} className="bg-white p-7 rounded-[1.8rem] border border-slate-100 shadow-sm transition-all hover:shadow-md">
-            <p className="text-slate-400 text-[10px] font-black uppercase tracking-tight mb-3">{stat.label}</p>
-            <h3 className="text-3xl font-extrabold text-[#111827] tracking-tighter mb-1.5">{stat.value}</h3>
-            <p className={`text-[11px] font-bold ${stat.col}`}>{stat.note}</p>
+  return (
+    <>
+      <DashGlobalStyles />
+      <div style={{ ...pageShellStyle, display:"flex", flexDirection:"column", gap:24 }}>
+
+      <PageHead
+        icon={Shield}
+        title="Management Console"
+        subtitle="Manage branches & assign principals"
+        right={
+          <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+            <button
+              onClick={() => setShowAddBranchModal(true)}
+              className="dash-btn"
+              style={{
+                display:"inline-flex", alignItems:"center", gap:6,
+                padding:"10px 14px", borderRadius:12,
+                background:"#fff", color:T3, border:"0.5px solid rgba(0,85,255,.12)",
+                fontSize:11, fontWeight:800, letterSpacing:"0.08em", textTransform:"uppercase",
+                cursor:"pointer", boxShadow:SHADOW_SM, fontFamily:"inherit",
+              }}
+            >
+              <Building2 size={13}/> Add Branch
+            </button>
+            <button
+              onClick={() => setShowBulkModal(true)}
+              className="dash-btn"
+              style={{
+                display:"inline-flex", alignItems:"center", gap:6,
+                padding:"10px 14px", borderRadius:12,
+                background:"rgba(123,63,244,.08)", color:VIOLET, border:"0.5px solid rgba(123,63,244,.22)",
+                fontSize:11, fontWeight:800, letterSpacing:"0.08em", textTransform:"uppercase",
+                cursor:"pointer", boxShadow:SHADOW_SM, fontFamily:"inherit",
+              }}
+            >
+              <Hash size={13}/> Bulk Invite
+            </button>
+            <button
+              onClick={() => setShowInviteModal(true)}
+              className="dash-btn"
+              style={{
+                display:"inline-flex", alignItems:"center", gap:6,
+                padding:"10px 16px", borderRadius:12,
+                background:GRAD_PRIMARY, color:"#fff",
+                fontSize:11, fontWeight:800, letterSpacing:"0.08em", textTransform:"uppercase",
+                border:"none", cursor:"pointer", boxShadow:SHADOW_BTN, fontFamily:"inherit",
+              }}
+            >
+              <UserPlus size={13}/> Invite Principal
+            </button>
           </div>
-        ))}
+        }
+      />
+
+      <DarkHero
+        icon={Building2}
+        eyebrow={<><Sparkles size={11} style={{ display:"inline", marginRight:4 }}/> Management Intelligence</> as any}
+        title={totalBranches.toString()}
+        subtitle={`Branch${totalBranches!==1?"es":""} in network · ${activePrincipals} active principal${activePrincipals!==1?"s":""} · ${unassignedBranches} awaiting assignment`}
+        stats={[
+          { label:"Principals", value: totalPrincipals.toString() },
+          { label:"Active",     value: activePrincipals.toString() },
+          { label:"Pending",    value: pendingInvites.toString() },
+        ]}
+      />
+
+      {/* Bright Stat Grid */}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(5, 1fr)", gap:14 }}>
+        <StatTile label="Total Branches"    value={totalBranches.toString()}      sub={`${branches.filter(b => b.status === 'Active').length} active`} grad={GRAD_BLUE}   icon={Building2} onClick={()=>setActiveTab('branches')} />
+        <StatTile label="Total Principals"  value={totalPrincipals.toString()}    sub="Across network"             grad={GRAD_VIOLET} icon={Users}     onClick={()=>setActiveTab('principals')} />
+        <StatTile label="Active Principals" value={activePrincipals.toString()}   sub="Currently managing"         grad={GRAD_GREEN}  icon={CheckCircle2} onClick={()=>setActiveTab('principals')} />
+        <StatTile label="Pending Invites"   value={pendingInvites.toString()}     sub="Awaiting acceptance"        grad={GRAD_GOLD}   icon={Clock}     onClick={()=>setActiveTab('principals')} />
+        <StatTile label="Unassigned"        value={unassignedBranches.toString()} sub="Need principal"             grad={unassignedBranches > 0 ? GRAD_RED : GRAD_GREEN} icon={AlertTriangle} onClick={()=>setActiveTab('branches')} />
       </div>
 
       {/* Tab Switcher */}
-      <div className="flex items-center gap-3">
+      <div style={{ display:"flex", gap:8 }}>
         {[
           { key: 'branches', label: 'Branches', icon: Building2 },
           { key: 'principals', label: 'Principals', icon: Users },
-        ].map(tab => (
-          <button
-            key={tab.key}
-            onClick={() => { setActiveTab(tab.key as any); setSearchQuery(''); }}
-            className={`flex items-center gap-2 px-7 py-3 rounded-xl text-sm font-bold transition-all ${
-              activeTab === tab.key ? 'bg-[#1e3a8a] text-white shadow-lg shadow-blue-900/10' : 'bg-white text-slate-500 border border-slate-100 hover:bg-slate-50'
-            }`}
-          >
-            <tab.icon className="w-4 h-4" /> {tab.label}
-          </button>
-        ))}
+        ].map(t => {
+          const active = activeTab === t.key;
+          return (
+            <button
+              key={t.key}
+              onClick={() => { setActiveTab(t.key as any); setSearchQuery(''); }}
+              className="dash-btn"
+              style={{
+                display:"inline-flex", alignItems:"center", gap:8,
+                padding:"11px 22px", borderRadius:14,
+                background: active ? GRAD_PRIMARY : "#fff",
+                color: active ? "#fff" : T3,
+                fontSize:12, fontWeight:800, letterSpacing:"0.10em", textTransform:"uppercase",
+                border: active ? "none" : "0.5px solid rgba(0,85,255,.12)",
+                boxShadow: active ? SHADOW_BTN : SHADOW_SM,
+                cursor:"pointer", fontFamily:"inherit",
+              }}
+            >
+              <t.icon size={14}/> {t.label}
+            </button>
+          );
+        })}
       </div>
 
       {/* Search Bar */}
-      <div className="relative">
-        <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-        <Input
+      <div style={{ position:"relative" }}>
+        <Search size={16} color={T4} style={{ position:"absolute", left:18, top:"50%", transform:"translateY(-50%)" }}/>
+        <input
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="h-14 pl-14 pr-6 bg-white border-slate-100 rounded-2xl shadow-sm focus:ring-blue-900/5 transition-all text-sm font-medium"
           placeholder={activeTab === 'principals' ? "Search principals by name, email, or branch..." : "Search branches by name or location..."}
+          style={{
+            width:"100%", padding:"14px 20px 14px 48px", borderRadius:16,
+            border:"0.5px solid rgba(0,85,255,.1)", background:"#fff",
+            fontSize:13, fontWeight:500, color:T1, outline:"none",
+            boxShadow:SHADOW_SM, fontFamily:"inherit",
+          }}
         />
       </div>
 
@@ -1335,6 +1390,16 @@ export default function PrincipalManagement() {
           </div>
         </div>
       )}
-    </div>
+
+      <AIInsightCard
+        title="Management Console Intelligence"
+        items={[
+          { label:"Network Coverage", value: `${totalBranches} branch${totalBranches!==1?"es":""}`, sub: unassignedBranches > 0 ? `${unassignedBranches} unassigned` : "Fully staffed" },
+          { label:"Leadership",       value: `${activePrincipals}/${totalPrincipals} active`, sub: pendingInvites > 0 ? `${pendingInvites} pending invite${pendingInvites!==1?"s":""}` : "All onboarded" },
+          { label:"Priority",         value: unassignedBranches > 0 ? "Assign principals" : pendingInvites > 0 ? "Follow up invites" : "Maintain operations", sub: unassignedBranches > 0 || pendingInvites > 0 ? "Action recommended" : "Healthy state" },
+        ]}
+      />
+      </div>
+    </>
   );
 }

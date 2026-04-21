@@ -3,8 +3,15 @@ import { useNavigate } from "react-router-dom";
 import {
   ShieldCheck, Clock, CheckCircle2, XCircle, User, Mail,
   Phone, Building2, Loader2, Search, Filter, RefreshCw,
-  AlertCircle, ChevronDown, Eye, EyeOff, UserCheck, Users
+  AlertCircle, ChevronDown, Eye, EyeOff, UserCheck, Users,
+  Sparkles,
 } from "lucide-react";
+import {
+  B1, T1, T3, T4, GREEN, RED, GOLD, VIOLET,
+  GRAD_PRIMARY, GRAD_BLUE, GRAD_GREEN, GRAD_VIOLET, GRAD_GOLD, GRAD_RED,
+  SHADOW_SM, SHADOW_BTN, pageShellStyle,
+  DashGlobalStyles, PageHead, StatTile, DarkHero, Card3D, AIInsightCard,
+} from "@/lib/dashboardTokens";
 import { auth, db } from "@/lib/firebase";
 import {
   collection, query, where, onSnapshot, updateDoc, doc,
@@ -206,66 +213,74 @@ export default function DEOManagement() {
   // ── Loading ───────────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center h-[70vh] gap-4">
-        <Loader2 className="w-10 h-10 animate-spin text-[#1e3a8a]" />
-        <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Loading DEO Data...</p>
+      <div style={{ ...pageShellStyle, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:14 }}>
+        <Loader2 className="animate-spin" size={38} color={B1}/>
+        <p style={{ fontSize:10, fontWeight:800, color:T4, letterSpacing:"0.14em", textTransform:"uppercase" }}>Loading DEO Data...</p>
       </div>
     );
   }
 
+  const totalApproved = counts.approved;
+  const totalBranchesWithDEO = new Set(requests.filter(r=>r.status==="approved").map(r=>r.branchId)).size;
+
   return (
-    <div className="max-w-[1200px] mx-auto space-y-8 animate-in fade-in duration-500">
+    <>
+      <DashGlobalStyles />
+      <div style={{ ...pageShellStyle, display:"flex", flexDirection:"column", gap:24 }}>
 
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl lg:text-3xl font-black text-[#1e293b] tracking-tight">DEO Management</h1>
-          <p className="text-slate-400 text-sm font-medium mt-1">
-            Data Entry Operators across all branches — real-time access oversight
-          </p>
-        </div>
-        {/* Summary pills */}
-        <div className="flex items-center gap-3 flex-wrap">
-          {(["pending", "approved", "rejected"] as const).map(s => {
-            const cfg = STATUS_CONFIG[s];
-            return (
-              <div key={s} className={`flex items-center gap-2 px-4 py-2 rounded-2xl border ${cfg.bg} ${cfg.border}`}>
-                <div className={`w-2 h-2 rounded-full ${cfg.dot}`} />
-                <span className={`text-xs font-black ${cfg.text}`}>{counts[s]} {cfg.label}</span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { label: "Total DEOs",      value: requests.length,      icon: Users,       color: "text-[#1e3a8a]", bg: "bg-blue-50"    },
-          { label: "Active (Approved)", value: counts.approved,   icon: UserCheck,   color: "text-emerald-600", bg: "bg-emerald-50" },
-          { label: "Awaiting Approval", value: counts.pending,    icon: Clock,       color: "text-amber-600",  bg: "bg-amber-50"   },
-          { label: "Branches with DEOs",value: new Set(requests.filter(r=>r.status==="approved").map(r=>r.branchId)).size, icon: Building2, color: "text-purple-600", bg: "bg-purple-50" },
-        ].map((s, i) => (
-          <div
-            key={i}
-            onClick={() => navigate("/deo")}
-            role="button"
-            tabIndex={0}
-            className="clickable-card bg-white rounded-[1.5rem] border border-slate-100 p-6 shadow-sm"
-          >
-            <div className={`w-10 h-10 rounded-xl ${s.bg} flex items-center justify-center mb-4`}>
-              <s.icon className={`w-5 h-5 ${s.color}`} />
-            </div>
-            <p className="text-2xl font-black text-[#1e293b]">{s.value}</p>
-            <p className="text-[11px] font-bold text-slate-400 mt-1 uppercase tracking-wide">{s.label}</p>
+      <PageHead
+        icon={ShieldCheck}
+        title="DEO Management"
+        subtitle="Data Entry Operators across all branches — real-time oversight"
+        right={
+          <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+            {(["pending", "approved", "rejected"] as const).map(s => {
+              const cfg = STATUS_CONFIG[s];
+              const grad = s === "pending" ? GRAD_GOLD : s === "approved" ? GRAD_GREEN : GRAD_RED;
+              return (
+                <div key={s}
+                  style={{
+                    display:"inline-flex", alignItems:"center", gap:6,
+                    padding:"8px 14px", borderRadius:12,
+                    background:"#fff", border:"0.5px solid rgba(0,85,255,.1)",
+                    fontSize:10, fontWeight:800, color:T3,
+                    letterSpacing:"0.08em", textTransform:"uppercase",
+                    boxShadow:SHADOW_SM,
+                  }}
+                >
+                  <div style={{ width:8, height:8, borderRadius:"50%", background:grad }}/>
+                  {counts[s]} {cfg.label}
+                </div>
+              );
+            })}
           </div>
-        ))}
+        }
+      />
+
+      <DarkHero
+        icon={Users}
+        eyebrow={<><Sparkles size={11} style={{ display:"inline", marginRight:4 }}/> DEO Intelligence</> as any}
+        title={requests.length.toString()}
+        subtitle={`Total DEO request${requests.length!==1?"s":""} across ${Object.keys(branches).length} branch${Object.keys(branches).length!==1?"es":""} · ${totalApproved} active`}
+        stats={[
+          { label:"Pending",   value: counts.pending.toString() },
+          { label:"Approved",  value: counts.approved.toString() },
+          { label:"Rejected",  value: counts.rejected.toString() },
+        ]}
+      />
+
+      {/* Bright Stat Grid */}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(4, 1fr)", gap:16 }}>
+        <StatTile label="Total DEOs"         value={requests.length.toString()}     sub="All requests"       grad={GRAD_BLUE}   icon={Users}       onClick={()=>setTab("pending")} />
+        <StatTile label="Active (Approved)"  value={counts.approved.toString()}     sub="Currently active"   grad={GRAD_GREEN}  icon={UserCheck}   onClick={()=>setTab("approved")} />
+        <StatTile label="Awaiting Approval"  value={counts.pending.toString()}      sub="Pending review"     grad={GRAD_GOLD}   icon={Clock}       onClick={()=>setTab("pending")} />
+        <StatTile label="Branches with DEOs" value={totalBranchesWithDEO.toString()} sub="Branch coverage"   grad={GRAD_VIOLET} icon={Building2}   />
       </div>
 
-      {/* Filters */}
-      <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm">
+      {/* Filters panel */}
+      <Card3D padding={0} style={{ overflow:"hidden" }}>
         {/* Tabs */}
-        <div className="flex items-center border-b border-slate-50 px-6 pt-2 gap-1">
+        <div style={{ display:"flex", gap:4, borderBottom:"0.5px solid rgba(0,85,255,.08)", padding:"6px 8px" }}>
           {(["pending", "approved", "rejected"] as const).map(s => {
             const cfg = STATUS_CONFIG[s];
             const active = tab === s;
@@ -273,15 +288,24 @@ export default function DEOManagement() {
               <button
                 key={s}
                 onClick={() => setTab(s)}
-                className={`flex items-center gap-2 px-5 py-4 text-xs font-black uppercase tracking-widest transition-all border-b-2 -mb-px ${
-                  active
-                    ? `border-[#1e3a8a] ${cfg.text}`
-                    : "border-transparent text-slate-400 hover:text-slate-600"
-                }`}
+                className="dash-btn"
+                style={{
+                  display:"inline-flex", alignItems:"center", gap:8,
+                  padding:"10px 18px", borderRadius:12,
+                  background: active ? GRAD_PRIMARY : "transparent",
+                  color: active ? "#fff" : T3,
+                  fontSize:11, fontWeight:800, letterSpacing:"0.10em", textTransform:"uppercase",
+                  border:"none", cursor:"pointer", fontFamily:"inherit",
+                  boxShadow: active ? SHADOW_BTN : "none",
+                }}
               >
                 {cfg.label}
                 {counts[s] > 0 && (
-                  <span className={`w-5 h-5 rounded-full text-[10px] font-black flex items-center justify-center ${active ? `${cfg.bg} ${cfg.text}` : "bg-slate-100 text-slate-400"}`}>
+                  <span style={{
+                    fontSize:10, fontWeight:800, padding:"2px 7px", borderRadius:999,
+                    background: active ? "rgba(255,255,255,.3)" : "rgba(0,85,255,.08)",
+                    color: active ? "#fff" : B1,
+                  }}>
                     {counts[s]}
                   </span>
                 )}
@@ -291,30 +315,40 @@ export default function DEOManagement() {
         </div>
 
         {/* Search + branch filter */}
-        <div className="flex flex-col sm:flex-row gap-3 p-4 border-b border-slate-50">
-          <div className="relative flex-1">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+        <div style={{ display:"flex", gap:10, padding:"14px 18px", borderBottom:"0.5px solid rgba(0,85,255,.08)", flexWrap:"wrap" }}>
+          <div style={{ position:"relative", flex:1, minWidth:220 }}>
+            <Search size={14} color={T4} style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)" }}/>
             <input
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Search by name or email..."
-              className="w-full h-11 pl-10 pr-4 rounded-xl border border-slate-100 bg-slate-50 text-sm font-medium text-[#1e293b] outline-none focus:border-blue-200 focus:bg-white transition-all"
+              style={{
+                width:"100%", padding:"10px 12px 10px 36px", borderRadius:12,
+                border:"0.5px solid rgba(0,85,255,.14)", background:"#F5F9FF",
+                fontSize:13, fontWeight:500, color:T1, outline:"none", fontFamily:"inherit",
+              }}
             />
           </div>
           {branchList.length > 1 && (
-            <div className="relative">
-              <Filter className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 pointer-events-none" />
+            <div style={{ position:"relative" }}>
+              <Filter size={14} color={T4} style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", pointerEvents:"none" }}/>
               <select
                 value={branchFilter}
                 onChange={e => setBranchFilter(e.target.value)}
-                className="h-11 pl-10 pr-8 rounded-xl border border-slate-100 bg-slate-50 text-sm font-semibold text-[#1e293b] outline-none focus:border-blue-200 focus:bg-white transition-all appearance-none"
+                style={{
+                  appearance:"none", padding:"10px 36px 10px 36px", borderRadius:12,
+                  border:"0.5px solid rgba(0,85,255,.14)", background:"#F5F9FF",
+                  fontSize:12, fontWeight:700, color:T3,
+                  outline:"none", fontFamily:"inherit", cursor:"pointer", minWidth:180,
+                }}
               >
                 <option value="all">All Branches</option>
                 {branchList.map(([id, name]) => (
                   <option key={id} value={id}>{name}</option>
                 ))}
               </select>
+              <ChevronDown size={13} color={T4} style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", pointerEvents:"none" }}/>
             </div>
           )}
         </div>
@@ -458,19 +492,37 @@ export default function DEOManagement() {
             })}
           </div>
         )}
-      </div>
+      </Card3D>
 
-      {/* Info note */}
-      <div className="flex items-start gap-3 p-5 rounded-2xl bg-blue-50 border border-blue-100">
-        <ShieldCheck className="w-5 h-5 text-[#1e3a8a] shrink-0 mt-0.5" />
+      {/* Info banner */}
+      <div
+        style={{
+          background:"#fff", borderRadius:18, padding:"16px 18px",
+          border:"0.5px solid rgba(0,85,255,.1)", boxShadow:SHADOW_SM,
+          display:"flex", alignItems:"flex-start", gap:12,
+        }}
+      >
+        <div style={{ width:36, height:36, borderRadius:11, background:GRAD_PRIMARY, display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 6px 14px rgba(0,85,255,.28)", flexShrink:0 }}>
+          <ShieldCheck size={18} color="#fff" strokeWidth={2.3}/>
+        </div>
         <div>
-          <p className="text-sm font-bold text-[#1e3a8a]">DEO Access Flow</p>
-          <p className="text-xs text-blue-600 font-medium mt-1 leading-relaxed">
+          <p style={{ fontSize:13, fontWeight:800, color:T1, margin:0, letterSpacing:"-0.2px" }}>DEO Access Flow</p>
+          <p style={{ fontSize:11, fontWeight:500, color:T3, margin:"4px 0 0 0", lineHeight:1.55 }}>
             DEOs request access via their branch principal's dashboard. The principal approves or rejects with specific page permissions.
             As owner, you have oversight visibility and can revoke approved access or reinstate rejected requests across all branches.
           </p>
         </div>
       </div>
-    </div>
+
+      <AIInsightCard
+        title="DEO Intelligence Summary"
+        items={[
+          { label:"Access Queue",     value: counts.pending > 0 ? `${counts.pending} pending` : "No pending", sub: counts.pending > 0 ? "Principal action needed" : "All caught up" },
+          { label:"Active Workforce", value: `${counts.approved} active DEO${counts.approved!==1?"s":""}`, sub: `Across ${totalBranchesWithDEO} branch${totalBranchesWithDEO!==1?"es":""}` },
+          { label:"Rejection Rate",   value: requests.length > 0 ? `${Math.round((counts.rejected/requests.length)*100)}%` : "—", sub: counts.rejected > 0 ? `${counts.rejected} rejected` : "No rejections" },
+        ]}
+      />
+      </div>
+    </>
   );
 }
