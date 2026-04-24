@@ -14,6 +14,7 @@ import {
 } from "recharts";
 import { useNavigate } from "react-router-dom";
 import BenchmarkCard from "@/components/BenchmarkCard";
+import { tilt3D, tilt3DStyle } from "@/lib/use3DTilt";
 
 const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
@@ -497,6 +498,7 @@ export default function Dashboard() {
       {/* ── Fresh School Onboarding Banner ───────────────── */}
       {isFreshSchool && (
         <div
+          {...tilt3D}
           style={{
             background: GRAD_HERO,
             borderRadius: isMobile ? 20 : 24,
@@ -506,6 +508,7 @@ export default function Dashboard() {
             position: "relative",
             overflow: "hidden",
             boxShadow: "0 14px 40px rgba(0,8,60,.32), 0 0 0 .5px rgba(255,255,255,.12)",
+            ...tilt3DStyle,
           }}
         >
           <div
@@ -655,6 +658,7 @@ export default function Dashboard() {
       {/* ── Dark Hero Banner (AHI) ────────────────────────── */}
       {!isFreshSchool && (
         <div
+          {...tilt3D}
           style={{
             background: GRAD_HERO,
             borderRadius: isMobile ? 20 : 24,
@@ -663,6 +667,7 @@ export default function Dashboard() {
             overflow: "hidden",
             boxShadow: "0 12px 36px rgba(0,8,60,.28), 0 0 0 .5px rgba(255,255,255,.12)",
             marginBottom: isMobile ? 14 : 18,
+            ...tilt3DStyle,
           }}
         >
           <div
@@ -765,7 +770,7 @@ export default function Dashboard() {
       )}
 
       {/* ── Bright Stat Grid (4 cards) ───────────────────── */}
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : isTablet ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: isMobile ? 10 : 14, marginBottom: isMobile ? 16 : 20 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : isTablet ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: isMobile ? 10 : 14, marginBottom: isMobile ? 16 : 20, perspective: "1200px" }}>
         {[
           {
             title: "Academic Health Index",
@@ -825,6 +830,7 @@ export default function Dashboard() {
             onClick={() => navigate(s.href)}
             role="button"
             tabIndex={0}
+            {...tilt3D}
             style={{
               borderRadius: isMobile ? 16 : 20,
               padding: isMobile ? 14 : 20,
@@ -832,9 +838,9 @@ export default function Dashboard() {
               overflow: "hidden",
               background: s.bg,
               border: s.border,
-              boxShadow: "0 10px 28px rgba(0,0,0,.08), 0 2px 6px rgba(0,0,0,.04)",
+              boxShadow: SHADOW_LG,
               cursor: "pointer",
-              transition: "transform .18s cubic-bezier(.34,1.56,.64,1)",
+              ...tilt3DStyle,
             }}
           >
             <div style={{ position: "absolute", top: -24, right: -20, width: 110, height: 110, borderRadius: "50%", background: "radial-gradient(circle, rgba(255,255,255,.65) 0%, transparent 70%)", pointerEvents: "none" }} />
@@ -863,10 +869,10 @@ export default function Dashboard() {
       </div>
 
       {/* ── Middle Row ───────────────────────────────────── */}
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : isTablet ? "repeat(2, 1fr)" : "repeat(12, 1fr)", gap: isMobile ? 12 : 14, marginBottom: isMobile ? 16 : 20 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : isTablet ? "repeat(2, 1fr)" : "repeat(12, 1fr)", gap: isMobile ? 12 : 14, marginBottom: isMobile ? 16 : 20, perspective: "1200px" }}>
 
         {/* Branch Overview */}
-        <div style={{ gridColumn: isMobile ? "span 1" : isTablet ? "span 1" : "span 4", background: "#fff", borderRadius: isMobile ? 20 : 24, border: "0.5px solid rgba(0,85,255,.10)", boxShadow: SHADOW_LG, padding: isMobile ? "18px 18px" : "22px 24px" }}>
+        <div {...tilt3D} style={{ gridColumn: isMobile ? "span 1" : isTablet ? "span 1" : "span 4", background: "#fff", borderRadius: isMobile ? 20 : 24, border: "0.5px solid rgba(0,85,255,.10)", boxShadow: SHADOW_LG, padding: isMobile ? "18px 18px" : "22px 24px", ...tilt3DStyle }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
             <h3 style={{ fontSize: 15, fontWeight: 700, color: T1, letterSpacing: "-0.2px", margin: 0 }}>Branch Overview</h3>
             {branches.length > 0 && (
@@ -914,7 +920,7 @@ export default function Dashboard() {
         </div>
 
         {/* Risk Distribution */}
-        <div style={{ gridColumn: isMobile ? "span 1" : isTablet ? "span 1" : "span 4", background: "#fff", borderRadius: isMobile ? 20 : 24, border: "0.5px solid rgba(0,85,255,.10)", boxShadow: SHADOW_LG, padding: isMobile ? "18px 18px" : "22px 24px" }}>
+        <div {...tilt3D} style={{ gridColumn: isMobile ? "span 1" : isTablet ? "span 1" : "span 4", background: "#fff", borderRadius: isMobile ? 20 : 24, border: "0.5px solid rgba(0,85,255,.10)", boxShadow: SHADOW_LG, padding: isMobile ? "18px 18px" : "22px 24px", ...tilt3DStyle }}>
           <h3 style={{ fontSize: 15, fontWeight: 700, color: T1, letterSpacing: "-0.2px", margin: "0 0 18px 0" }}>Risk Distribution</h3>
           {riskData.every(r => r.value === 0) ? (
             <div style={{ height: 220, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, borderRadius: 18, border: "0.5px dashed rgba(0,85,255,.2)", background: "rgba(0,200,83,.03)" }}>
@@ -957,7 +963,7 @@ export default function Dashboard() {
         </div>
 
         {/* Revenue Trend */}
-        <div style={{ gridColumn: isMobile ? "span 1" : isTablet ? "span 2" : "span 4", background: "#fff", borderRadius: isMobile ? 20 : 24, border: "0.5px solid rgba(0,85,255,.10)", boxShadow: SHADOW_LG, padding: isMobile ? "18px 18px" : "22px 24px" }}>
+        <div {...tilt3D} style={{ gridColumn: isMobile ? "span 1" : isTablet ? "span 2" : "span 4", background: "#fff", borderRadius: isMobile ? 20 : 24, border: "0.5px solid rgba(0,85,255,.10)", boxShadow: SHADOW_LG, padding: isMobile ? "18px 18px" : "22px 24px", ...tilt3DStyle }}>
           <h3 style={{ fontSize: 15, fontWeight: 700, color: T1, letterSpacing: "-0.2px", margin: "0 0 18px 0" }}>Revenue Trend</h3>
           {revenueTrend.every(r => r.revenue === 0) ? (
             <div style={{ height: 220, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, borderRadius: 18, border: "0.5px dashed rgba(0,85,255,.2)", background: "rgba(0,85,255,.03)" }}>
@@ -992,10 +998,10 @@ export default function Dashboard() {
       </div>
 
       {/* ── Bottom Row ───────────────────────────────────── */}
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? 12 : 14, marginBottom: isMobile ? 16 : 20 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? 12 : 14, marginBottom: isMobile ? 16 : 20, perspective: "1200px" }}>
 
         {/* Critical Alerts */}
-        <div style={{ background: "#fff", borderRadius: isMobile ? 20 : 24, border: "0.5px solid rgba(0,85,255,.10)", boxShadow: SHADOW_LG, padding: isMobile ? "18px 18px" : "22px 24px" }}>
+        <div {...tilt3D} style={{ background: "#fff", borderRadius: isMobile ? 20 : 24, border: "0.5px solid rgba(0,85,255,.10)", boxShadow: SHADOW_LG, padding: isMobile ? "18px 18px" : "22px 24px", ...tilt3DStyle }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
             <h3 style={{ fontSize: 15, fontWeight: 700, color: T1, letterSpacing: "-0.2px", margin: 0 }}>Critical Alerts</h3>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -1062,7 +1068,7 @@ export default function Dashboard() {
         </div>
 
         {/* Quick Actions */}
-        <div style={{ background: "#fff", borderRadius: isMobile ? 20 : 24, border: "0.5px solid rgba(0,85,255,.10)", boxShadow: SHADOW_LG, padding: isMobile ? "18px 18px" : "22px 24px" }}>
+        <div {...tilt3D} style={{ background: "#fff", borderRadius: isMobile ? 20 : 24, border: "0.5px solid rgba(0,85,255,.10)", boxShadow: SHADOW_LG, padding: isMobile ? "18px 18px" : "22px 24px", ...tilt3DStyle }}>
           <h3 style={{ fontSize: 15, fontWeight: 700, color: T1, letterSpacing: "-0.2px", margin: "0 0 16px 0" }}>Quick Actions</h3>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: isMobile ? 10 : 12 }}>
             <button
@@ -1108,7 +1114,7 @@ export default function Dashboard() {
       </div>
 
       {/* ── Improvement Timeline ─────────────────────────── */}
-      <div style={{ background: "#fff", borderRadius: isMobile ? 20 : 24, border: "0.5px solid rgba(0,85,255,.10)", boxShadow: SHADOW_LG, padding: isMobile ? "18px 18px" : "22px 24px", marginBottom: isMobile ? 16 : 20 }}>
+      <div {...tilt3D} style={{ background: "#fff", borderRadius: isMobile ? 20 : 24, border: "0.5px solid rgba(0,85,255,.10)", boxShadow: SHADOW_LG, padding: isMobile ? "18px 18px" : "22px 24px", marginBottom: isMobile ? 16 : 20, perspective: "1200px", ...tilt3DStyle }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
           <div>
             <h3 style={{ fontSize: 15, fontWeight: 700, color: T1, letterSpacing: "-0.2px", margin: 0 }}>School Improvement Timeline</h3>

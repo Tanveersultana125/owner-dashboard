@@ -13,6 +13,7 @@ import {
 } from "recharts";
 import { useParams, useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { tilt3D, tilt3DStyle } from "@/lib/use3DTilt";
 
 /* ── constants ────────────────────────────────────────── */
 const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -422,28 +423,6 @@ export default function TeacherPerformance() {
 
   const globalStyles = (
     <style>{`
-      .tp3d {
-        transition: transform .45s cubic-bezier(.2,.9,.25,1.2), box-shadow .35s ease;
-        transform-style: preserve-3d;
-        will-change: transform;
-      }
-      .tp3d:hover {
-        transform: perspective(1000px) translateY(-6px) rotateX(3deg) rotateY(-3deg) scale(1.015);
-        box-shadow: 0 0 0 .5px rgba(0,85,255,.18), 0 22px 54px rgba(0,16,64,.22), 0 6px 18px rgba(0,85,255,.22) !important;
-      }
-      .tp-tile {
-        transition: transform .5s cubic-bezier(.2,.9,.25,1.2), box-shadow .35s ease;
-      }
-      .tp-tile:hover {
-        transform: perspective(1100px) translateY(-8px) rotateX(4deg) rotateY(-4deg) scale(1.025);
-      }
-      .tp-card {
-        transition: transform .45s cubic-bezier(.2,.9,.25,1.2), box-shadow .35s ease;
-      }
-      .tp-card:hover {
-        transform: perspective(900px) translateY(-8px) rotateX(3deg) scale(1.02);
-        box-shadow: 0 0 0 .5px rgba(0,85,255,.18), 0 22px 54px rgba(0,16,64,.22), 0 6px 18px rgba(0,85,255,.22) !important;
-      }
       .tp-btn {
         transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
       }
@@ -502,10 +481,12 @@ export default function TeacherPerformance() {
 
           {/* ── Hero Detail Card ──────────────────────── */}
           <div
+            {...tilt3D}
             style={{
               background:GRAD_HERO, borderRadius: isMobile ? 18 : 24, padding: isMobile ? "18px 16px" : "24px 28px", color:"#fff",
               marginBottom: isMobile ? 16 : 24, position:"relative", overflow:"hidden",
               boxShadow:"0 14px 40px rgba(0,8,60,.32), 0 0 0 .5px rgba(255,255,255,.12)",
+              ...tilt3DStyle,
             }}
           >
             <div style={{ position:"absolute", top:-60, right:-40, width:280, height:280, background:"radial-gradient(circle, rgba(255,255,255,.12) 0%, transparent 65%)", borderRadius:"50%", pointerEvents:"none" }}/>
@@ -574,7 +555,7 @@ export default function TeacherPerformance() {
           ) : (
             <>
               {/* ── Bright Stat Grid ─────────────────── */}
-              <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: isMobile ? 10 : 16, marginBottom: isMobile ? 16 : 24 }}>
+              <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: isMobile ? 10 : 16, marginBottom: isMobile ? 16 : 24, perspective:"1200px" }}>
                 {[
                   {
                     label:"Effectiveness Score",
@@ -615,11 +596,12 @@ export default function TeacherPerformance() {
                       key={s.label}
                       onClick={()=>navigate(s.route)}
                       role="button" tabIndex={0}
-                      className="tp-tile"
+                      {...tilt3D}
                       style={{
                         background:s.grad, borderRadius: isMobile ? 16 : 22, padding: isMobile ? "14px 14px" : "20px 22px", color:"#fff",
                         cursor:"pointer", position:"relative", overflow:"hidden",
                         boxShadow:"0 0 0 .5px rgba(255,255,255,.15), 0 14px 38px rgba(0,85,255,.26), 0 4px 12px rgba(0,85,255,.18)",
+                        ...tilt3DStyle,
                       }}
                     >
                       <div style={{ position:"absolute", top:-30, right:-20, width:110, height:110, background:"radial-gradient(circle, rgba(255,255,255,.22) 0%, transparent 70%)", borderRadius:"50%", pointerEvents:"none" }}/>
@@ -642,14 +624,15 @@ export default function TeacherPerformance() {
               </div>
 
               {/* ── Charts Row (2-col) ───────────────── */}
-              <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)", gap: isMobile ? 12 : 16, marginBottom: isMobile ? 16 : 24 }}>
+              <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)", gap: isMobile ? 12 : 16, marginBottom: isMobile ? 16 : 24, perspective:"1200px" }}>
 
                 {/* Performance Timeline */}
                 <div
-                  className="tp3d"
+                  {...tilt3D}
                   style={{
                     background:"#fff", borderRadius: isMobile ? 16 : 22, padding: isMobile ? "16px 14px" : "22px 24px",
                     boxShadow:SHADOW_SM, border:"0.5px solid rgba(0,85,255,.08)",
+                    ...tilt3DStyle,
                   }}
                 >
                   <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
@@ -687,10 +670,11 @@ export default function TeacherPerformance() {
 
                 {/* vs Branch Average */}
                 <div
-                  className="tp3d"
+                  {...tilt3D}
                   style={{
                     background:"#fff", borderRadius: isMobile ? 16 : 22, padding: isMobile ? "16px 14px" : "22px 24px",
                     boxShadow:SHADOW_SM, border:"0.5px solid rgba(0,85,255,.08)",
+                    ...tilt3DStyle,
                   }}
                 >
                   <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
@@ -724,10 +708,12 @@ export default function TeacherPerformance() {
 
               {/* ── Current Classes ──────────────────── */}
               <div
+                {...tilt3D}
                 style={{
                   background:"#fff", borderRadius: isMobile ? 16 : 22, padding: isMobile ? "16px 14px" : "22px 24px",
                   boxShadow:SHADOW_SM, border:"0.5px solid rgba(0,85,255,.08)",
-                  marginBottom: isMobile ? 16 : 24,
+                  marginBottom: isMobile ? 16 : 24, perspective:"1200px",
+                  ...tilt3DStyle,
                 }}
               >
                 <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom: isMobile ? 12 : 16 }}>
@@ -747,10 +733,11 @@ export default function TeacherPerformance() {
                   <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: isMobile ? 10 : 14 }}>
                     {detailClasses.map(cls => (
                       <div key={cls.id}
-                        className="tp-card"
+                        {...tilt3D}
                         style={{
                           background:"#F5F9FF", borderRadius: isMobile ? 14 : 16, padding: isMobile ? "13px 14px" : "16px 18px",
                           border:"0.5px solid rgba(0,85,255,.1)", cursor:"pointer",
+                          ...tilt3DStyle,
                         }}
                       >
                         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, marginBottom:10 }}>
@@ -826,10 +813,12 @@ export default function TeacherPerformance() {
 
         {/* ── Dark Hero Banner ───────────────────────── */}
         <div
+          {...tilt3D}
           style={{
             background:GRAD_HERO, borderRadius: isMobile ? 18 : 24, padding: isMobile ? "18px 18px" : "24px 28px", color:"#fff",
             marginBottom: isMobile ? 16 : 24, position:"relative", overflow:"hidden",
             boxShadow:"0 14px 40px rgba(0,8,60,.32), 0 0 0 .5px rgba(255,255,255,.12)",
+            ...tilt3DStyle,
           }}
         >
           <div style={{ position:"absolute", top:-60, right:-40, width:280, height:280, background:"radial-gradient(circle, rgba(255,255,255,.12) 0%, transparent 65%)", borderRadius:"50%", pointerEvents:"none" }}/>
@@ -866,7 +855,7 @@ export default function TeacherPerformance() {
         </div>
 
         {/* ── Bright Stat Grid ───────────────────────── */}
-        <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: isMobile ? 10 : 16, marginBottom: isMobile ? 16 : 24 }}>
+        <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: isMobile ? 10 : 16, marginBottom: isMobile ? 16 : 24, perspective:"1200px" }}>
           {[
             { label:"Total Teachers", value:totalTeachers.toString(), sub:`In ${branchFilter === "All" ? "all branches" : branchFilter}`, grad:GRAD_BLUE, icon:Users, route:"/teachers-directory" },
             { label:"Avg Effectiveness", value:`${avgEffectiveness}${typeof avgEffectiveness === "string" && avgEffectiveness !== "—" ? "%" : ""}`, sub:"Across all exams", grad:GRAD_GREEN, icon:Award, route:"/teachers" },
@@ -879,11 +868,12 @@ export default function TeacherPerformance() {
                 key={s.label}
                 onClick={()=>navigate(s.route)}
                 role="button" tabIndex={0}
-                className="tp-tile"
+                {...tilt3D}
                 style={{
                   background:s.grad, borderRadius: isMobile ? 16 : 22, padding: isMobile ? "14px 14px" : "20px 22px", color:"#fff",
                   cursor:"pointer", position:"relative", overflow:"hidden",
                   boxShadow:"0 0 0 .5px rgba(255,255,255,.15), 0 14px 38px rgba(0,85,255,.26), 0 4px 12px rgba(0,85,255,.18)",
+                  ...tilt3DStyle,
                 }}
               >
                 <div style={{ position:"absolute", top:-30, right:-20, width:110, height:110, background:"radial-gradient(circle, rgba(255,255,255,.22) 0%, transparent 70%)", borderRadius:"50%", pointerEvents:"none" }}/>
@@ -901,14 +891,15 @@ export default function TeacherPerformance() {
         </div>
 
         {/* ── Charts Row (3-col) ────────────────────── */}
-        <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: isMobile ? 12 : 16, marginBottom: isMobile ? 16 : 24 }}>
+        <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: isMobile ? 12 : 16, marginBottom: isMobile ? 16 : 24, perspective:"1200px" }}>
 
           {/* Performance Distribution */}
           <div
-            className="tp3d"
+            {...tilt3D}
             style={{
               background:"#fff", borderRadius: isMobile ? 16 : 22, padding: isMobile ? "16px 14px" : "22px 24px",
               boxShadow:SHADOW_SM, border:"0.5px solid rgba(0,85,255,.08)",
+              ...tilt3DStyle,
             }}
           >
             <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
@@ -950,10 +941,11 @@ export default function TeacherPerformance() {
 
           {/* Subject Ratings */}
           <div
-            className="tp3d"
+            {...tilt3D}
             style={{
               background:"#fff", borderRadius: isMobile ? 16 : 22, padding: isMobile ? "16px 14px" : "22px 24px",
               boxShadow:SHADOW_SM, border:"0.5px solid rgba(0,85,255,.08)",
+              ...tilt3DStyle,
             }}
           >
             <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
@@ -989,11 +981,12 @@ export default function TeacherPerformance() {
 
           {/* Top Performers */}
           <div
-            className="tp3d"
+            {...tilt3D}
             style={{
               background:"#fff", borderRadius: isMobile ? 16 : 22, padding: isMobile ? "16px 14px" : "22px 24px",
               boxShadow:SHADOW_SM, border:"0.5px solid rgba(0,85,255,.08)",
               maxHeight: isMobile ? 380 : 320, overflowY:"auto",
+              ...tilt3DStyle,
             }}
           >
             <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14, position:"sticky", top:0, background:"#fff", zIndex:2 }}>
@@ -1046,11 +1039,12 @@ export default function TeacherPerformance() {
 
         {/* ── Performance vs Attendance Trend ────────── */}
         <div
-          className="tp3d"
+          {...tilt3D}
           style={{
             background:"#fff", borderRadius: isMobile ? 16 : 22, padding: isMobile ? "16px 14px" : "22px 24px",
             boxShadow:SHADOW_SM, border:"0.5px solid rgba(0,85,255,.08)",
-            marginBottom: isMobile ? 16 : 24,
+            marginBottom: isMobile ? 16 : 24, perspective:"1200px",
+            ...tilt3DStyle,
           }}
         >
           <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom: isMobile ? 12 : 16 }}>
@@ -1083,10 +1077,12 @@ export default function TeacherPerformance() {
 
         {/* ── Teacher Cards Grid ────────────────────── */}
         <div
+          {...tilt3D}
           style={{
             background:"#fff", borderRadius: isMobile ? 16 : 22,
             boxShadow:SHADOW_SM, border:"0.5px solid rgba(0,85,255,.08)",
-            overflow:"hidden", marginBottom: isMobile ? 16 : 24,
+            overflow:"hidden", marginBottom: isMobile ? 16 : 24, perspective:"1200px",
+            ...tilt3DStyle,
           }}
         >
           <div style={{ padding: isMobile ? "14px 14px" : "18px 24px", borderBottom:"0.5px solid rgba(0,85,255,.08)", display:"flex", alignItems:"center", gap: isMobile ? 8 : 12, flexWrap:"wrap" }}>
@@ -1114,11 +1110,12 @@ export default function TeacherPerformance() {
               return (
                 <div
                   key={t.id}
-                  className="tp-card"
+                  {...tilt3D}
                   style={{
                     background:"#F5F9FF", borderRadius: isMobile ? 14 : 18, padding: isMobile ? "14px 14px" : "18px 20px",
                     border:"0.5px solid rgba(0,85,255,.1)", cursor:"pointer",
                     position:"relative", overflow:"hidden",
+                    ...tilt3DStyle,
                   }}
                   onClick={()=>navigate(`/teachers/${t.id}`)}
                 >
@@ -1195,10 +1192,12 @@ export default function TeacherPerformance() {
 
         {/* ── AI Intelligence Card ──────────────────── */}
         <div
+          {...tilt3D}
           style={{
             background:GRAD_HERO, borderRadius: isMobile ? 16 : 22, padding: isMobile ? "18px 16px" : "24px 26px", color:"#fff",
             position:"relative", overflow:"hidden",
             boxShadow:"0 14px 40px rgba(0,8,60,.32), 0 0 0 .5px rgba(255,255,255,.12)",
+            ...tilt3DStyle,
           }}
         >
           <div style={{ position:"absolute", bottom:-50, left:-40, width:240, height:240, background:"radial-gradient(circle, rgba(123,63,244,.28) 0%, transparent 65%)", borderRadius:"50%", pointerEvents:"none" }}/>

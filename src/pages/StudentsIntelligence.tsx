@@ -13,6 +13,7 @@ import {
   PieChart, Pie, Cell, AreaChart, Area, LineChart, Line
 } from "recharts";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { tilt3D, tilt3DStyle } from "@/lib/use3DTilt";
 
 const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const GRADE_COLORS = ["#1e3a8a","#2563eb","#3b82f6","#60a5fa","#93c5fd","#bfdbfe"];
@@ -472,21 +473,6 @@ export default function StudentsIntelligence() {
   return (
     <>
       <style>{`
-        .stu3d {
-          transition: transform .45s cubic-bezier(.2,.9,.25,1.2), box-shadow .35s ease;
-          transform-style: preserve-3d;
-          will-change: transform;
-        }
-        .stu3d:hover {
-          transform: perspective(1000px) translateY(-6px) rotateX(3deg) rotateY(-3deg) scale(1.015);
-          box-shadow: 0 0 0 .5px rgba(0,85,255,.18), 0 22px 54px rgba(0,16,64,.22), 0 6px 18px rgba(0,85,255,.22) !important;
-        }
-        .stu-tile {
-          transition: transform .5s cubic-bezier(.2,.9,.25,1.2), box-shadow .35s ease;
-        }
-        .stu-tile:hover {
-          transform: perspective(1100px) translateY(-8px) rotateX(4deg) rotateY(-4deg) scale(1.025);
-        }
         .stu-row {
           transition: transform .3s ease, background .2s ease;
         }
@@ -549,10 +535,12 @@ export default function StudentsIntelligence() {
         <>
           {/* ── Dark Hero Banner ───────────────────────── */}
           <div
+            {...tilt3D}
             style={{
               background:GRAD_HERO, borderRadius: isMobile ? 18 : 24, padding: isMobile ? "18px 18px" : "24px 28px", color:"#fff",
               marginBottom: isMobile ? 16 : 24, position:"relative", overflow:"hidden",
               boxShadow:"0 14px 40px rgba(0,8,60,.32), 0 0 0 .5px rgba(255,255,255,.12)",
+              ...tilt3DStyle,
             }}
           >
             <div style={{ position:"absolute", top:-60, right:-40, width:280, height:280, background:"radial-gradient(circle, rgba(255,255,255,.12) 0%, transparent 65%)", borderRadius:"50%", pointerEvents:"none" }}/>
@@ -589,7 +577,7 @@ export default function StudentsIntelligence() {
           </div>
 
           {/* ── Bright Stat Grid ─────────────────────── */}
-          <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: isMobile ? 10 : 16, marginBottom: isMobile ? 16 : 24 }}>
+          <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: isMobile ? 10 : 16, marginBottom: isMobile ? 16 : 24, perspective:"1200px" }}>
             {[
               { label:"Total Enrollment", value:totalEnrollment.toLocaleString(), sub:newThisTerm > 0 ? `+${newThisTerm} this term` : "Steady", grad:GRAD_BLUE, icon:Users, delta:newThisTerm > 0 ? "up" : null, route:"/students" },
               { label:"Avg Attendance", value:avgAttendance > 0 ? `${avgAttendance}%` : "—", sub:`Across ${totalEnrollment} students`, grad:GRAD_GREEN, icon:Percent, delta:null, route:"/students" },
@@ -603,11 +591,12 @@ export default function StudentsIntelligence() {
                   onClick={()=>navigate(s.route)}
                   role="button"
                   tabIndex={0}
-                  className="stu-tile"
+                  {...tilt3D}
                   style={{
                     background:s.grad, borderRadius: isMobile ? 16 : 22, padding: isMobile ? "14px 14px" : "20px 22px", color:"#fff",
                     cursor:"pointer", position:"relative", overflow:"hidden",
                     boxShadow:"0 0 0 .5px rgba(255,255,255,.15), 0 14px 38px rgba(0,85,255,.26), 0 4px 12px rgba(0,85,255,.18)",
+                    ...tilt3DStyle,
                   }}
                 >
                   <div style={{ position:"absolute", top:-30, right:-20, width:110, height:110, background:"radial-gradient(circle, rgba(255,255,255,.22) 0%, transparent 70%)", borderRadius:"50%", pointerEvents:"none" }}/>
@@ -630,14 +619,15 @@ export default function StudentsIntelligence() {
           </div>
 
           {/* ── Charts Row (3-col) ───────────────────── */}
-          <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: isMobile ? 12 : 16, marginBottom: isMobile ? 16 : 24 }}>
+          <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: isMobile ? 12 : 16, marginBottom: isMobile ? 16 : 24, perspective:"1200px" }}>
 
             {/* Grade Distribution */}
             <div
-              className="stu3d"
+              {...tilt3D}
               style={{
                 background:"#fff", borderRadius: isMobile ? 16 : 22, padding: isMobile ? "16px 14px 14px" : "22px 22px 18px",
                 boxShadow:SHADOW_SM, border:"0.5px solid rgba(0,85,255,.08)",
+                ...tilt3DStyle,
               }}
             >
               <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
@@ -673,10 +663,11 @@ export default function StudentsIntelligence() {
 
             {/* Enrollment Trend */}
             <div
-              className="stu3d"
+              {...tilt3D}
               style={{
                 background:"#fff", borderRadius: isMobile ? 16 : 22, padding: isMobile ? "16px 14px 14px" : "22px 22px 18px",
                 boxShadow:SHADOW_SM, border:"0.5px solid rgba(0,85,255,.08)",
+                ...tilt3DStyle,
               }}
             >
               <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
@@ -710,10 +701,11 @@ export default function StudentsIntelligence() {
 
             {/* Performance by Branch */}
             <div
-              className="stu3d"
+              {...tilt3D}
               style={{
                 background:"#fff", borderRadius: isMobile ? 16 : 22, padding: isMobile ? "16px 14px 14px" : "22px 22px 18px",
                 boxShadow:SHADOW_SM, border:"0.5px solid rgba(0,85,255,.08)",
+                ...tilt3DStyle,
               }}
             >
               <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
@@ -752,11 +744,12 @@ export default function StudentsIntelligence() {
 
           {/* ── Attendance Heatmap ───────────────────── */}
           <div
-            className="stu3d"
+            {...tilt3D}
             style={{
               background:"#fff", borderRadius: isMobile ? 16 : 22, padding: isMobile ? "16px 14px" : "22px 24px",
               boxShadow:SHADOW_SM, border:"0.5px solid rgba(0,85,255,.08)",
-              marginBottom: isMobile ? 16 : 24,
+              marginBottom: isMobile ? 16 : 24, perspective:"1200px",
+              ...tilt3DStyle,
             }}
           >
             <div style={{ display:"flex", alignItems: isMobile ? "flex-start" : "center", justifyContent:"space-between", gap: isMobile ? 10 : 16, marginBottom: isMobile ? 14 : 20, flexWrap:"wrap" }}>
@@ -834,10 +827,12 @@ export default function StudentsIntelligence() {
 
           {/* ── Student Table ─────────────────────────── */}
           <div
+            {...tilt3D}
             style={{
               background:"#fff", borderRadius: isMobile ? 16 : 22,
               boxShadow:SHADOW_SM, border:"0.5px solid rgba(0,85,255,.08)",
-              overflow:"hidden", marginBottom: isMobile ? 16 : 24,
+              overflow:"hidden", marginBottom: isMobile ? 16 : 24, perspective:"1200px",
+              ...tilt3DStyle,
             }}
           >
             <div style={{ padding: isMobile ? "14px 14px" : "18px 24px", borderBottom:"0.5px solid rgba(0,85,255,.08)", display:"flex", gap: isMobile ? 8 : 12, alignItems:"center", flexWrap:"wrap" }}>
@@ -1099,11 +1094,13 @@ export default function StudentsIntelligence() {
             const headerGrad = selected.score>=75 ? GRAD_GREEN : selected.score>=50 ? GRAD_GOLD : GRAD_RED;
             return (
               <div
+                {...tilt3D}
                 style={{
                   background:"#fff", borderRadius: isMobile ? 16 : 22,
                   boxShadow:SHADOW_LG, border:"0.5px solid rgba(0,85,255,.10)",
                   overflow:"hidden", marginBottom: isMobile ? 16 : 24,
-                  animation:"slide-in-from-bottom .3s ease",
+                  animation:"slide-in-from-bottom .3s ease", perspective:"1200px",
+                  ...tilt3DStyle,
                 }}
               >
                 <div style={{ padding: isMobile ? "16px 14px" : "22px 26px", borderBottom:"0.5px solid rgba(0,85,255,.08)", display:"flex", justifyContent:"space-between", alignItems: isMobile ? "flex-start" : "center", gap: isMobile ? 10 : 16, flexWrap:"wrap" }}>
@@ -1177,10 +1174,11 @@ export default function StudentsIntelligence() {
                         ].map(c=>{
                           const Icon = c.icon;
                           return (
-                            <div key={c.label} className="stu3d"
+                            <div key={c.label} {...tilt3D}
                               style={{
                                 background:"#F5F9FF", borderRadius: isMobile ? 14 : 16, padding: isMobile ? "14px 14px" : "16px 18px",
                                 border:"0.5px solid rgba(0,85,255,.1)",
+                                ...tilt3DStyle,
                               }}
                             >
                               <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10 }}>
@@ -1232,10 +1230,12 @@ export default function StudentsIntelligence() {
 
           {/* ── AI Intelligence Card ─────────────────── */}
           <div
+            {...tilt3D}
             style={{
               background:GRAD_HERO, borderRadius: isMobile ? 16 : 22, padding: isMobile ? "18px 16px" : "24px 26px", color:"#fff",
               position:"relative", overflow:"hidden",
               boxShadow:"0 14px 40px rgba(0,8,60,.32), 0 0 0 .5px rgba(255,255,255,.12)",
+              ...tilt3DStyle,
             }}
           >
             <div style={{ position:"absolute", bottom:-50, left:-40, width:240, height:240, background:"radial-gradient(circle, rgba(123,63,244,.28) 0%, transparent 65%)", borderRadius:"50%", pointerEvents:"none" }}/>

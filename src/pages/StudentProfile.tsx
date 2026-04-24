@@ -18,49 +18,30 @@ const toDate = (v: any): Date | null => { if (!v) return null; if (v?.toDate) re
 const MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
 const timeAgo = (v: any) => { const d = toDate(v); if (!d) return ""; const s = (Date.now() - d.getTime()) / 1000; if (s < 60) return "just now"; if (s < 3600) return `${Math.floor(s / 60)}m ago`; if (s < 86400) return `${Math.floor(s / 3600)}h ago`; return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }).toUpperCase(); };
 
-// ── 3D Card wrapper with hover tilt ──────────────────────────────────────────
+// ── Card with Dashboard-vibe hover (lift + blue halo, no rotation) ───────────
 const Card = ({ children, title, action, style }: { children: React.ReactNode; title?: string; action?: React.ReactNode; style?: React.CSSProperties }) => {
-  const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const [hovered, setHovered] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  const handleMove = (e: React.MouseEvent) => {
-    if (!ref.current) return;
-    const rect = ref.current.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width;
-    const y = (e.clientY - rect.top) / rect.height;
-    setTilt({ x: (y - 0.5) * -8, y: (x - 0.5) * 8 });
-  };
-  const handleLeave = () => { setTilt({ x: 0, y: 0 }); setHovered(false); };
 
   return (
     <div
-      ref={ref}
-      onMouseMove={handleMove}
       onMouseEnter={() => setHovered(true)}
-      onMouseLeave={handleLeave}
+      onMouseLeave={() => setHovered(false)}
       style={{
         background: T.white,
         border: `1px solid ${hovered ? "rgba(59,91,219,0.25)" : T.bdr}`,
         borderRadius: 16,
         overflow: "hidden",
-        transform: `perspective(800px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) ${hovered ? "translateY(-4px) scale(1.01)" : "translateY(0) scale(1)"}`,
-        transition: "transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease",
+        transform: hovered ? "translate3d(0,-5px,0) scale(1.02)" : "translate3d(0,0,0) scale(1)",
+        transition: "transform 0.22s cubic-bezier(0.2,0.8,0.2,1), box-shadow 0.22s ease, border-color 0.3s",
         boxShadow: hovered
-          ? "0 20px 40px rgba(59,91,219,0.1), 0 8px 16px rgba(0,0,0,0.06), 0 0 0 1px rgba(59,91,219,0.08)"
+          ? "0 0 0 0.5px rgba(59,91,219,0.14), 0 8px 24px rgba(59,91,219,0.16), 0 20px 46px rgba(59,91,219,0.18)"
           : "0 1px 3px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.02)",
         willChange: "transform",
+        backfaceVisibility: "hidden",
         position: "relative",
         ...style,
       }}
     >
-      {hovered && (
-        <div style={{
-          position: "absolute", inset: 0, pointerEvents: "none", zIndex: 1,
-          background: `radial-gradient(circle at ${(tilt.y / 8 + 0.5) * 100}% ${(-tilt.x / 8 + 0.5) * 100}%, rgba(59,91,219,0.06) 0%, transparent 60%)`,
-          borderRadius: 16,
-        }} />
-      )}
       {title && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: `1px solid ${T.s2}`, position: "relative", zIndex: 2 }}>
           <span style={{ fontSize: 14, fontWeight: 600, color: T.ink }}>{title}</span>

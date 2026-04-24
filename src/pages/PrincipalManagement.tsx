@@ -11,7 +11,7 @@ import {
 import {
   B1, T1, T3, T4, GREEN, RED, GOLD, VIOLET,
   GRAD_PRIMARY, GRAD_BLUE, GRAD_GREEN, GRAD_VIOLET, GRAD_GOLD, GRAD_RED,
-  SHADOW_SM, SHADOW_BTN, usePageShellStyle,
+  SHADOW_SM, SHADOW_LG, SHADOW_BTN, usePageShellStyle,
   DashGlobalStyles, PageHead, StatTile, DarkHero, AIInsightCard,
 } from "@/lib/dashboardTokens";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -559,7 +559,8 @@ export default function PrincipalManagement() {
                   onClick={() => navigate(`/branches/${branch.id}`)}
                   role="button"
                   tabIndex={0}
-                  className="clickable-card bg-white rounded-2xl md:rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden transition-all group"
+                  className="dash3d clickable-card bg-white rounded-2xl md:rounded-[2rem] border border-slate-100 overflow-hidden group"
+                  style={{ boxShadow: SHADOW_SM }}
                 >
                   {/* Branch Header Strip */}
                   <div className="h-2" style={{ backgroundColor: branch.color }}></div>
@@ -665,7 +666,7 @@ export default function PrincipalManagement() {
 
             {/* ── Manage Panel (shown below grid when a branch is selected) ── */}
             {manageBranch && (
-              <div className="md:col-span-2 lg:col-span-3 bg-white rounded-2xl md:rounded-[2rem] border border-[#1e3a8a]/20 shadow-lg p-4 md:p-6 animate-in slide-in-from-top-2 duration-200">
+              <div className="dash3d md:col-span-2 lg:col-span-3 bg-white rounded-2xl md:rounded-[2rem] border border-[#1e3a8a]/20 p-4 md:p-6 animate-in slide-in-from-top-2 duration-200" style={{ boxShadow: SHADOW_LG }}>
                 <div className="flex items-center justify-between mb-5">
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white shrink-0" style={{ backgroundColor: manageBranch.color }}>
@@ -727,7 +728,8 @@ export default function PrincipalManagement() {
             {/* Add New Branch Card */}
             <button
               onClick={() => setShowAddBranchModal(true)}
-              className="bg-white rounded-2xl md:rounded-[2rem] border-2 border-dashed border-slate-200 p-6 md:p-8 flex flex-col items-center justify-center gap-3 md:gap-4 text-slate-400 hover:border-blue-300 hover:text-blue-500 hover:bg-blue-50/30 transition-all min-h-[180px] md:min-h-[350px] group"
+              className="dash3d bg-white rounded-2xl md:rounded-[2rem] border-2 border-dashed border-slate-200 p-6 md:p-8 flex flex-col items-center justify-center gap-3 md:gap-4 text-slate-400 hover:border-blue-300 hover:text-blue-500 hover:bg-blue-50/30 min-h-[180px] md:min-h-[350px] group"
+              style={{ boxShadow: SHADOW_SM }}
             >
               <div className="w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center group-hover:bg-blue-100 group-hover:border-blue-200 transition-all">
                 <Plus className="w-6 h-6 md:w-8 md:h-8" />
@@ -768,7 +770,7 @@ export default function PrincipalManagement() {
       {activeTab === 'principals' && (
         <>
           {/* Principals — Table (desktop) / Cards (mobile) */}
-          <div className="bg-white rounded-2xl md:rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
+          <div className="dash3d bg-white rounded-2xl md:rounded-[2.5rem] border border-slate-100 overflow-hidden" style={{ boxShadow: SHADOW_SM }}>
             <div className="p-5 md:p-10 border-b border-slate-50 flex items-center justify-between">
               <h3 className="text-base md:text-xl font-bold text-[#111827]">All Principals</h3>
               <div className="flex items-center gap-2">

@@ -561,6 +561,7 @@ export default function TeachersDirectory() {
 
         {/* Scoring banner */}
         <div
+          className="dash3d"
           style={{
             background:"#fff", borderRadius: isMobile ? 14 : 18, padding: isMobile ? "12px 14px" : "14px 18px",
             border:"0.5px solid rgba(0,85,255,.10)", boxShadow:SHADOW_SM,
@@ -640,6 +641,7 @@ export default function TeachersDirectory() {
 
         {/* Tabs */}
         <div
+          className="dash3d"
           style={{
             background:"#fff", borderRadius: isMobile ? 16 : 22,
             boxShadow:SHADOW_SM, border:"0.5px solid rgba(0,85,255,.08)",
@@ -797,6 +799,7 @@ export default function TeachersDirectory() {
             {tab === "top" && (
               <div style={{ display:"flex", flexDirection:"column", gap: isMobile ? 12 : 16 }}>
                 <div
+                  className="dash3d"
                   style={{
                     background:GRAD_GREEN, borderRadius: isMobile ? 14 : 18, padding: isMobile ? "14px 16px" : "18px 22px",
                     color:"#fff", display:"flex", gap: isMobile ? 12 : 14, alignItems:"flex-start",
@@ -829,6 +832,7 @@ export default function TeachersDirectory() {
             {tab === "defaulter" && (
               <div style={{ display:"flex", flexDirection:"column", gap: isMobile ? 12 : 16 }}>
                 <div
+                  className="dash3d"
                   style={{
                     background:GRAD_RED, borderRadius: isMobile ? 14 : 18, padding: isMobile ? "14px 16px" : "18px 22px",
                     color:"#fff", display:"flex", gap: isMobile ? 12 : 14, alignItems:"flex-start",

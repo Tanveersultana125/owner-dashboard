@@ -24,6 +24,7 @@ import {
   CheckCircle2, Clock, IndianRupee, BookOpen, Activity,
   ShieldAlert, Eye, Loader2, Minus,
 } from "lucide-react";
+import { tilt3D, tilt3DStyle } from "@/lib/use3DTilt";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface PortalData {
@@ -182,7 +183,7 @@ export default function ParentPortal() {
       <div className="px-4 py-6 max-w-lg mx-auto space-y-4">
 
         {/* ── Risk Alert Banner ────────────────────────────────────────── */}
-        <div className={`rounded-2xl border ${risk.border} ${risk.bg} p-4 flex items-start gap-3`}>
+        <div {...tilt3D} style={tilt3DStyle} className={`rounded-2xl border ${risk.border} ${risk.bg} p-4 flex items-start gap-3`}>
           <RiskIcon className={`w-5 h-5 ${risk.color} shrink-0 mt-0.5`} />
           <div>
             <p className={`font-black text-sm ${risk.color}`}>{risk.label}</p>
@@ -193,7 +194,7 @@ export default function ParentPortal() {
         {/* ── Key Metrics ─────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 gap-3">
           {/* Attendance */}
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex flex-col items-center gap-2">
+          <div {...tilt3D} style={tilt3DStyle} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex flex-col items-center gap-2">
             <CircleProgress value={data.attendance} color={getAttColor(data.attendance)} />
             <p className="text-xs font-black text-slate-500 uppercase tracking-wider">Attendance</p>
             {data.attendance < 75 && (
@@ -202,7 +203,7 @@ export default function ParentPortal() {
           </div>
 
           {/* Average Score */}
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex flex-col items-center gap-2">
+          <div {...tilt3D} style={tilt3DStyle} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex flex-col items-center gap-2">
             <CircleProgress value={data.avgScore} color={getScoreColor(data.avgScore)} />
             <p className="text-xs font-black text-slate-500 uppercase tracking-wider">Avg Score</p>
             {data.avgScore < 50 && (
@@ -213,7 +214,7 @@ export default function ParentPortal() {
 
         {/* ── Recent Test Scores ───────────────────────────────────────── */}
         {data.recentScores.length > 0 && (
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+          <div {...tilt3D} style={tilt3DStyle} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
             <p className="text-xs font-black text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-1.5">
               <BookOpen className="w-3.5 h-3.5" />
               Recent Test Scores
@@ -255,7 +256,7 @@ export default function ParentPortal() {
         )}
 
         {/* ── Fee Status ───────────────────────────────────────────────── */}
-        <div className={`rounded-2xl border p-4 flex items-center gap-3 ${
+        <div {...tilt3D} style={tilt3DStyle} className={`rounded-2xl border p-4 flex items-center gap-3 ${
           data.feeDefaulted
             ? "bg-amber-50 border-amber-200"
             : "bg-emerald-50 border-emerald-200"
@@ -273,7 +274,7 @@ export default function ParentPortal() {
 
         {/* ── Risk Factors ─────────────────────────────────────────────── */}
         {data.riskFactors.length > 0 && data.riskLevel !== "Safe" && (
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+          <div {...tilt3D} style={tilt3DStyle} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
             <p className="text-xs font-black text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-1.5">
               <Activity className="w-3.5 h-3.5" />
               Areas Needing Attention

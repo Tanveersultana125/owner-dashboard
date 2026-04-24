@@ -105,10 +105,10 @@
    Targets: rounded-lg/xl/2xl/3xl bordered cards, stat cards, ds-cards
    ═══════════════════════════════════════════════════════════════ */
 
-.bg-white[class*="rounded-"],
-.bg-card[class*="rounded-"],
-[class*="bg-white"][class*="border"][class*="rounded-"],
-div[class*="shadow-sm"][class*="rounded-"],
+.bg-white[class*="rounded-"]:not(.dash3d):not(.dash-tile):not(.dash-card),
+.bg-card[class*="rounded-"]:not(.dash3d):not(.dash-tile):not(.dash-card),
+[class*="bg-white"][class*="border"][class*="rounded-"]:not(.dash3d):not(.dash-tile):not(.dash-card),
+div[class*="shadow-sm"][class*="rounded-"]:not(.dash3d):not(.dash-tile):not(.dash-card),
 .stat-card {
   transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
               box-shadow 0.3s ease,
@@ -117,10 +117,10 @@ div[class*="shadow-sm"][class*="rounded-"],
   position: relative;
 }
 
-.bg-white[class*="rounded-"]:hover,
-.bg-card[class*="rounded-"]:hover,
-[class*="bg-white"][class*="border"][class*="rounded-"]:hover,
-div[class*="shadow-sm"][class*="rounded-"]:hover,
+.bg-white[class*="rounded-"]:not(.dash3d):not(.dash-tile):not(.dash-card):hover,
+.bg-card[class*="rounded-"]:not(.dash3d):not(.dash-tile):not(.dash-card):hover,
+[class*="bg-white"][class*="border"][class*="rounded-"]:not(.dash3d):not(.dash-tile):not(.dash-card):hover,
+div[class*="shadow-sm"][class*="rounded-"]:not(.dash3d):not(.dash-tile):not(.dash-card):hover,
 .stat-card:hover {
   transform: translateY(-4px) scale(1.008) !important;
   box-shadow: 0 20px 40px rgba(30, 58, 138, 0.08),
@@ -130,9 +130,9 @@ div[class*="shadow-sm"][class*="rounded-"]:hover,
 }
 
 /* Radial glow shine on hover */
-.bg-white[class*="rounded-"]:hover::after,
-.bg-card[class*="rounded-"]:hover::after,
-div[class*="shadow-sm"][class*="rounded-"]:hover::after,
+.bg-white[class*="rounded-"]:not(.dash3d):not(.dash-tile):not(.dash-card):hover::after,
+.bg-card[class*="rounded-"]:not(.dash3d):not(.dash-tile):not(.dash-card):hover::after,
+div[class*="shadow-sm"][class*="rounded-"]:not(.dash3d):not(.dash-tile):not(.dash-card):hover::after,
 .stat-card:hover::after {
   content: "";
   position: absolute;

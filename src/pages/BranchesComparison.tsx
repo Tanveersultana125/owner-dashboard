@@ -776,7 +776,7 @@ export default function BranchesComparison() {
           </div>
 
         {/* Wrapper for remaining legacy content */}
-        <div className="bg-white rounded-2xl md:rounded-[2rem] border border-slate-100 shadow-sm">
+        <div className="dash3d bg-white rounded-2xl md:rounded-[2rem] border border-slate-100" style={{ boxShadow: SHADOW_SM }}>
           <div className="p-4 md:p-8 lg:p-12">
 
             {/* Charts — only render if at least one has data */}
@@ -883,7 +883,7 @@ export default function BranchesComparison() {
         </div>
 
         {/* ── Recommended Action Plan ──────────────────────────────────────── */}
-        <div className="bg-white rounded-2xl md:rounded-[2rem] border border-slate-100 shadow-sm p-4 md:p-10">
+        <div className="dash3d bg-white rounded-2xl md:rounded-[2rem] border border-slate-100 p-4 md:p-10" style={{ boxShadow: SHADOW_SM }}>
           <h3 className="text-base md:text-xl font-bold text-[#111827] mb-5 md:mb-10">Recommended Action Plan</h3>
           <div className="space-y-0 divide-y divide-slate-50">
             {actionPlan.map((plan, idx) => (
@@ -1010,7 +1010,7 @@ export default function BranchesComparison() {
 
       {/* Branch Cards */}
       {branches.length === 0 ? (
-        <div className="py-12 md:py-20 px-4 flex flex-col items-center justify-center bg-white rounded-2xl md:rounded-[2rem] border border-slate-100">
+        <div className="dash3d py-12 md:py-20 px-4 flex flex-col items-center justify-center bg-white rounded-2xl md:rounded-[2rem] border border-slate-100" style={{ boxShadow: SHADOW_SM }}>
           <Building2 className="w-12 h-12 md:w-16 md:h-16 text-slate-200 mb-3 md:mb-4" />
           <p className="text-sm font-bold text-slate-400">No branches yet</p>
           <p className="text-xs text-slate-300 mt-1 mb-5 md:mb-6 text-center">Create your first branch to start comparing performance</p>
@@ -1262,7 +1262,7 @@ export default function BranchesComparison() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
 
           {/* Performance Ranking */}
-          <div className="bg-white rounded-2xl md:rounded-[2.5rem] border border-slate-100 p-4 md:p-8 shadow-sm">
+          <div className="dash3d bg-white rounded-2xl md:rounded-[2.5rem] border border-slate-100 p-4 md:p-8" style={{ boxShadow: SHADOW_SM }}>
             <h3 className="text-base md:text-lg font-bold text-[#111827] mb-6 md:mb-12">Performance Ranking</h3>
             {rankingWithData.length === 0 ? (
               <div className="h-[260px] md:h-[300px] flex flex-col items-center justify-center border border-dashed border-slate-200 rounded-xl gap-2">
@@ -1301,7 +1301,7 @@ export default function BranchesComparison() {
           </div>
 
           {/* Comparative Trends */}
-          <div className="bg-white rounded-2xl md:rounded-[2.5rem] border border-slate-100 p-4 md:p-8 shadow-sm">
+          <div className="dash3d bg-white rounded-2xl md:rounded-[2.5rem] border border-slate-100 p-4 md:p-8" style={{ boxShadow: SHADOW_SM }}>
             <h3 className="text-base md:text-lg font-bold text-[#111827] mb-6 md:mb-12">Comparative Trends <span className="text-slate-400 font-medium text-xs md:text-sm">(Attendance %)</span></h3>
             {!hasTrendsData ? (
               <div className="h-[260px] md:h-[300px] flex flex-col items-center justify-center border border-dashed border-slate-200 rounded-xl gap-2">
@@ -1347,11 +1347,11 @@ export default function BranchesComparison() {
 
       {/* Efficiency Metrics */}
       {branches.length > 0 && (
-        <div className="bg-white rounded-2xl md:rounded-[2.5rem] border border-slate-100 shadow-sm p-4 md:p-10">
+        <div className="dash3d bg-white rounded-2xl md:rounded-[2.5rem] border border-slate-100 p-4 md:p-10" style={{ boxShadow: SHADOW_SM }}>
           <h3 className="text-base md:text-xl font-bold text-[#111827] mb-5 md:mb-10">Efficiency Metrics</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
             {efficiencyMetrics.map((m, i) => (
-              <div key={i} className="bg-[#f8fafc]/50 border border-slate-100 p-4 md:p-8 rounded-xl md:rounded-[1.5rem] text-center transition-all hover:bg-white hover:shadow-lg">
+              <div key={i} className="dash-tile bg-[#f8fafc]/50 border border-slate-100 p-4 md:p-8 rounded-xl md:rounded-[1.5rem] text-center" style={{ boxShadow: SHADOW_SM }}>
                 <p className="text-slate-400 text-[10px] md:text-[11px] font-bold uppercase tracking-tight mb-2 md:mb-4">{m.label}</p>
                 <h3 className={`text-xl md:text-3xl font-black tracking-tighter mb-1 md:mb-2 ${m.col}`}>{m.value}</h3>
                 <p className={`text-[10px] md:text-[11px] font-bold ${m.col}`}>{m.note}</p>

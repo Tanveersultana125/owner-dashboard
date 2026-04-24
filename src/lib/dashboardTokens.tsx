@@ -51,27 +51,33 @@ export function DashGlobalStyles() {
   return (
     <style>{`
       .dash3d {
-        transition: transform .45s cubic-bezier(.2,.9,.25,1.2), box-shadow .35s ease;
-        transform-style: preserve-3d;
+        transition: transform .22s cubic-bezier(0.2,0.8,0.2,1), box-shadow .22s ease;
+        backface-visibility: hidden;
+        -webkit-backface-visibility: hidden;
         will-change: transform;
       }
       .dash3d:hover {
-        transform: perspective(1000px) translateY(-6px) rotateX(3deg) rotateY(-3deg) scale(1.015);
-        box-shadow: 0 0 0 .5px rgba(0,85,255,.18), 0 22px 54px rgba(0,16,64,.22), 0 6px 18px rgba(0,85,255,.22) !important;
+        transform: translate3d(0,-5px,0) scale(1.02);
+        box-shadow: 0 0 0 .5px rgba(0,85,255,.14), 0 8px 24px rgba(0,85,255,.16), 0 20px 46px rgba(0,85,255,.18) !important;
       }
       .dash-tile {
-        transition: transform .5s cubic-bezier(.2,.9,.25,1.2), box-shadow .35s ease;
+        transition: transform .22s cubic-bezier(0.2,0.8,0.2,1), box-shadow .22s ease;
+        backface-visibility: hidden;
+        -webkit-backface-visibility: hidden;
         cursor: pointer;
       }
       .dash-tile:hover {
-        transform: perspective(1100px) translateY(-8px) rotateX(4deg) rotateY(-4deg) scale(1.025);
+        transform: translate3d(0,-5px,0) scale(1.02);
+        box-shadow: 0 0 0 .5px rgba(0,85,255,.14), 0 8px 24px rgba(0,85,255,.16), 0 20px 46px rgba(0,85,255,.18) !important;
       }
       .dash-card {
-        transition: transform .45s cubic-bezier(.2,.9,.25,1.2), box-shadow .35s ease;
+        transition: transform .22s cubic-bezier(0.2,0.8,0.2,1), box-shadow .22s ease;
+        backface-visibility: hidden;
+        -webkit-backface-visibility: hidden;
       }
       .dash-card:hover {
-        transform: perspective(900px) translateY(-8px) rotateX(3deg) scale(1.02);
-        box-shadow: 0 0 0 .5px rgba(0,85,255,.18), 0 22px 54px rgba(0,16,64,.22), 0 6px 18px rgba(0,85,255,.22) !important;
+        transform: translate3d(0,-5px,0) scale(1.02);
+        box-shadow: 0 0 0 .5px rgba(0,85,255,.14), 0 8px 24px rgba(0,85,255,.16), 0 20px 46px rgba(0,85,255,.18) !important;
       }
       .dash-row {
         transition: transform .3s ease, background .2s ease;
@@ -193,6 +199,7 @@ export function DarkHero({
   const isMobile = useIsMobile();
   return (
     <div
+      className="dash3d"
       style={{
         background:GRAD_HERO, borderRadius: isMobile ? 18 : 24, padding: isMobile ? "18px 18px" : "24px 28px", color:"#fff",
         marginBottom: isMobile ? 16 : 24, position:"relative", overflow:"hidden",
@@ -275,6 +282,7 @@ export function AIInsightCard({
   const isMobile = useIsMobile();
   return (
     <div
+      className="dash3d"
       style={{
         background:GRAD_HERO, borderRadius: isMobile ? 16 : 22, padding: isMobile ? "18px 16px" : "24px 26px", color:"#fff",
         position:"relative", overflow:"hidden",
