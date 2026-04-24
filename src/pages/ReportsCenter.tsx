@@ -309,7 +309,7 @@ export default function ReportsCenter() {
         </div>
 
         {/* Main Report Card */}
-        <div className="bg-white rounded-2xl md:rounded-[2rem] border border-slate-100 shadow-sm">
+        <div className="dash3d bg-white rounded-2xl md:rounded-[2rem] border border-slate-100" style={{ boxShadow: SHADOW_SM }}>
           <div className="p-4 md:p-8 lg:p-10">
             {/* Header */}
             <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4 md:gap-6 mb-6 md:mb-8">
@@ -349,7 +349,7 @@ export default function ReportsCenter() {
                 {/* Stats Cards */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5 mb-6 md:mb-12">
                   {payload.stats.map((stat, i) => (
-                    <div key={i} className="bg-[#f8fafc] border border-slate-100 p-3.5 md:p-6 rounded-xl md:rounded-[1.2rem] text-center transition-all hover:bg-white hover:shadow-lg">
+                    <div key={i} className="dash-tile bg-[#f8fafc] border border-slate-100 p-3.5 md:p-6 rounded-xl md:rounded-[1.2rem] text-center" style={{ boxShadow: SHADOW_SM }}>
                       <p className="text-slate-400 text-[9px] md:text-[11px] font-black uppercase tracking-widest mb-2 md:mb-3">{stat.label}</p>
                       <h3 className={`text-lg md:text-3xl font-black tracking-tighter ${getStatColor(reportData._type, i)}`}>{stat.value}</h3>
                     </div>
@@ -360,7 +360,7 @@ export default function ReportsCenter() {
                 {renderCharts(reportData, isMobile)}
 
                 {/* Summary */}
-                <div className="bg-[#f8fafc] border border-slate-100 p-4 md:p-8 rounded-xl md:rounded-[1.5rem] mb-4 md:mb-6">
+                <div className="dash3d bg-[#f8fafc] border border-slate-100 p-4 md:p-8 rounded-xl md:rounded-[1.5rem] mb-4 md:mb-6" style={{ boxShadow: SHADOW_SM }}>
                   <h4 className="text-sm md:text-base font-bold text-[#111827] mb-2 md:mb-4">Report Summary</h4>
                   <p className="text-slate-600 text-xs md:text-sm leading-relaxed">{(reportData as any).summary}</p>
                 </div>
@@ -387,7 +387,7 @@ export default function ReportsCenter() {
                 ) : (
                   <>
                     {/* Frequency picker */}
-                    <div className="bg-[#f8fafc] border border-slate-100 p-4 md:p-6 rounded-xl md:rounded-[1.5rem]">
+                    <div className="dash3d bg-[#f8fafc] border border-slate-100 p-4 md:p-6 rounded-xl md:rounded-[1.5rem]" style={{ boxShadow: SHADOW_SM }}>
                       <p className="text-[10px] md:text-xs font-black text-slate-400 uppercase tracking-widest mb-3 md:mb-4">Frequency</p>
                       <div className="grid grid-cols-3 gap-2 md:gap-3">
                         {(["Weekly", "Monthly", "Quarterly"] as const).map(freq => (
@@ -414,7 +414,7 @@ export default function ReportsCenter() {
                     </div>
 
                     {/* Recipient email */}
-                    <div className="bg-[#f8fafc] border border-slate-100 p-4 md:p-6 rounded-xl md:rounded-[1.5rem]">
+                    <div className="dash3d bg-[#f8fafc] border border-slate-100 p-4 md:p-6 rounded-xl md:rounded-[1.5rem]" style={{ boxShadow: SHADOW_SM }}>
                       <p className="text-[10px] md:text-xs font-black text-slate-400 uppercase tracking-widest mb-2 md:mb-3">Send To (Email)</p>
                       <div className="flex flex-col sm:flex-row gap-2 md:gap-3">
                         <input
@@ -445,7 +445,7 @@ export default function ReportsCenter() {
 
             {activeTab === "Share" && (
               <div className="animate-in fade-in duration-500">
-                <div className="bg-[#f8fafc] border border-slate-100 p-4 md:p-8 rounded-xl md:rounded-[1.5rem]">
+                <div className="dash3d bg-[#f8fafc] border border-slate-100 p-4 md:p-8 rounded-xl md:rounded-[1.5rem]" style={{ boxShadow: SHADOW_SM }}>
                   <h4 className="text-sm md:text-base font-bold text-[#111827] mb-4 md:mb-6">Share Report</h4>
                   <div className="flex flex-col gap-3 md:gap-4">
 
@@ -510,7 +510,7 @@ export default function ReportsCenter() {
 
             {activeTab === "Settings" && (
               <div className="animate-in fade-in duration-500">
-                <div className="bg-[#f8fafc] border border-slate-100 p-4 md:p-8 rounded-xl md:rounded-[1.5rem]">
+                <div className="dash3d bg-[#f8fafc] border border-slate-100 p-4 md:p-8 rounded-xl md:rounded-[1.5rem]" style={{ boxShadow: SHADOW_SM }}>
                   <h4 className="text-sm md:text-base font-bold text-[#111827] mb-4 md:mb-6">Report Settings</h4>
                   <div className="space-y-2.5 md:space-y-3">
                     {[
@@ -564,7 +564,7 @@ export default function ReportsCenter() {
         </div>
 
         {/* Export Options */}
-        <div className="bg-white rounded-2xl md:rounded-[2rem] border border-slate-100 shadow-sm p-4 md:p-10">
+        <div className="dash3d bg-white rounded-2xl md:rounded-[2rem] border border-slate-100 p-4 md:p-10" style={{ boxShadow: SHADOW_SM }}>
           <h3 className="text-sm md:text-xl font-black text-[#111827] mb-5 md:mb-10 uppercase tracking-widest">Export Options</h3>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
             {[
@@ -573,7 +573,7 @@ export default function ReportsCenter() {
               { label: "CSV", icon: <FileText className="w-5 h-5 md:w-8 md:h-8" />, col: "text-[#3b82f6]", format: "csv" as const },
               { label: "Email", icon: <Mail className="w-5 h-5 md:w-8 md:h-8" />, col: "text-[#1e3a8a]", format: "email" as const },
             ].map((opt, i) => (
-              <button key={i} onClick={() => handleExport(opt.format)} className="bg-[#f8fafc] border border-slate-100 p-4 md:p-8 rounded-xl md:rounded-[1.5rem] flex flex-col items-center gap-2 md:gap-4 transition-all hover:bg-white hover:shadow-lg hover:border-slate-200 cursor-pointer group">
+              <button key={i} onClick={() => handleExport(opt.format)} className="dash-tile bg-[#f8fafc] border border-slate-100 p-4 md:p-8 rounded-xl md:rounded-[1.5rem] flex flex-col items-center gap-2 md:gap-4 cursor-pointer group" style={{ boxShadow: SHADOW_SM }}>
                 <div className={`${opt.col} group-hover:scale-110 transition-transform`}>{opt.icon}</div>
                 <span className="text-[10px] md:text-sm font-black text-slate-600 uppercase tracking-widest">{opt.label}</span>
               </button>
@@ -699,7 +699,7 @@ export default function ReportsCenter() {
       </div>
 
       {/* Scheduled Reports */}
-      <div className="bg-white rounded-2xl md:rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
+      <div className="dash3d bg-white rounded-2xl md:rounded-[2.5rem] border border-slate-100 overflow-hidden" style={{ boxShadow: SHADOW_SM }}>
         <div className="p-4 md:p-10 border-b border-slate-50 flex items-center justify-between">
           <h3 className="text-sm md:text-xl font-black text-[#111827] uppercase tracking-widest">Scheduled Reports</h3>
           {isMobile && scheduled.length > 0 && (

@@ -452,7 +452,7 @@ export default function SettingsPage() {
       />
 
       {/* ── Section 1: Owner Profile ─────────────────────────────────────── */}
-      <div className="bg-white rounded-2xl md:rounded-[32px] border border-slate-100 shadow-sm p-5 md:p-8 lg:p-10">
+      <div className="dash3d bg-white rounded-2xl md:rounded-[32px] border border-slate-100 p-5 md:p-8 lg:p-10" style={{ boxShadow: SHADOW_SM }}>
         <h3 className="text-[11px] md:text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-5 md:mb-8">Owner Profile</h3>
 
         {/* Avatar / Logo zone */}
@@ -566,7 +566,7 @@ export default function SettingsPage() {
       </div>
 
       {/* ── Section 2: Preferences ───────────────────────────────────────── */}
-      <div className="bg-white rounded-2xl md:rounded-[32px] border border-slate-100 shadow-sm p-5 md:p-8 lg:p-10">
+      <div className="dash3d bg-white rounded-2xl md:rounded-[32px] border border-slate-100 p-5 md:p-8 lg:p-10" style={{ boxShadow: SHADOW_SM }}>
         <h3 className="text-[11px] md:text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-5 md:mb-8">System Preferences</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
           <Field label="Timezone" icon={Clock}>
@@ -612,7 +612,7 @@ export default function SettingsPage() {
       </div>
 
       {/* ── Section 3: Notifications ─────────────────────────────────────── */}
-      <div className="bg-white rounded-2xl md:rounded-[32px] border border-slate-100 shadow-sm p-5 md:p-8 lg:p-10">
+      <div className="dash3d bg-white rounded-2xl md:rounded-[32px] border border-slate-100 p-5 md:p-8 lg:p-10" style={{ boxShadow: SHADOW_SM }}>
         <h3 className="text-[11px] md:text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-5 md:mb-8">Notification Preferences</h3>
         <div className="space-y-1">
           {[
@@ -707,7 +707,7 @@ export default function SettingsPage() {
       </div>
 
       {/* ── Section 4: Data Export ───────────────────────────────────────── */}
-      <div className="bg-white rounded-2xl md:rounded-[32px] border border-slate-100 shadow-sm p-5 md:p-8 lg:p-10">
+      <div className="dash3d bg-white rounded-2xl md:rounded-[32px] border border-slate-100 p-5 md:p-8 lg:p-10" style={{ boxShadow: SHADOW_SM }}>
         <h3 className="text-[11px] md:text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Data Export</h3>
         <p className="text-[11px] md:text-xs text-slate-400 font-medium mb-5 md:mb-8">
           Download your school data as CSV files for compliance, backup, or analysis.
@@ -768,7 +768,7 @@ export default function SettingsPage() {
       </div>
 
       {/* ── Section 5: Risk Thresholds ───────────────────────────────────── */}
-      <div className="bg-white rounded-2xl md:rounded-[32px] border border-slate-100 shadow-sm p-5 md:p-8 lg:p-10">
+      <div className="dash3d bg-white rounded-2xl md:rounded-[32px] border border-slate-100 p-5 md:p-8 lg:p-10" style={{ boxShadow: SHADOW_SM }}>
         <h3 className="text-[11px] md:text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Risk Alert Thresholds</h3>
         <p className="text-[11px] md:text-xs text-slate-400 font-medium mb-5 md:mb-8">
           Customize when students are flagged as at-risk. These thresholds power the Risks &amp; Alerts page.

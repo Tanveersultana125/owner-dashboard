@@ -271,7 +271,7 @@ export default function TeacherLeaderboard() {
 
       {/* Empty state */}
       {ranked.length === 0 ? (
-        <div className="bg-white border border-dashed border-slate-200 rounded-2xl p-6 md:p-12 text-center">
+        <div className="dash3d bg-white border border-dashed border-slate-200 rounded-2xl p-6 md:p-12 text-center" style={{ boxShadow: SHADOW_SM }}>
           <Trophy className="w-10 h-10 md:w-12 md:h-12 text-slate-200 mx-auto mb-3 md:mb-4" />
           <h3 className="text-sm md:text-base font-extrabold text-[#1e294b] mb-1">No teachers to rank yet</h3>
           <p className="text-xs md:text-sm text-slate-500 font-medium max-w-md mx-auto leading-snug">
@@ -282,7 +282,7 @@ export default function TeacherLeaderboard() {
         <>
           {/* ═══ Top Podium — only teachers with real data ════════════ */}
           {top3.length > 0 && (
-            <div className="bg-gradient-to-br from-amber-50 via-white to-blue-50 rounded-2xl md:rounded-3xl border border-amber-100 p-4 md:p-8 pt-8 md:pt-10">
+            <div className="dash3d bg-gradient-to-br from-amber-50 via-white to-blue-50 rounded-2xl md:rounded-3xl border border-amber-100 p-4 md:p-8 pt-8 md:pt-10" style={{ boxShadow: SHADOW_SM }}>
               <div className="flex items-center gap-2 mb-5 md:mb-8">
                 <Award className="w-4 h-4 md:w-5 md:h-5 text-amber-600" />
                 <h2 className="text-[11px] md:text-sm font-extrabold text-[#1e294b] uppercase tracking-wider">
@@ -393,7 +393,7 @@ export default function TeacherLeaderboard() {
           </div>
 
           {/* ═══ Full ranked list ══════════════════════════════════════ */}
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          <div className="dash3d bg-white rounded-2xl border border-slate-100 overflow-hidden" style={{ boxShadow: SHADOW_SM }}>
             <div className="px-4 md:px-5 py-3 md:py-3.5 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
               <h3 className="text-[11px] md:text-xs font-extrabold text-[#1e294b] uppercase tracking-wider flex items-center gap-2">
                 <Filter className="w-3 h-3 md:w-3.5 md:h-3.5" /> Full Rankings ({ranked.length})
@@ -478,7 +478,8 @@ function PodiumCard({
       onClick={onClick}
       role="button"
       tabIndex={0}
-      className={`clickable-card relative ${accent.bg} ${accent.border} border-2 ${rounded} ${padding} flex flex-col items-center justify-end text-center shadow-sm hover:ring-4 ${accent.ring} transition-all cursor-pointer ${heightClass}`}
+      className={`dash3d clickable-card relative ${accent.bg} ${accent.border} border-2 ${rounded} ${padding} flex flex-col items-center justify-end text-center hover:ring-4 ${accent.ring} cursor-pointer ${heightClass}`}
+      style={{ boxShadow: SHADOW_SM }}
     >
       {/* Rank badge */}
       <div className={`absolute left-1/2 -translate-x-1/2 rounded-full ${accent.badgeBg} flex items-center justify-center text-white font-black shadow-lg ring-4 ring-white ${badgeSize}`}>
