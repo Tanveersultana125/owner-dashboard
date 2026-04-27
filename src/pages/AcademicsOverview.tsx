@@ -222,7 +222,7 @@ export default function AcademicsOverview() {
                 const groupCount = subject.classComparison.length;
                 const mobileMin = Math.max(320, groupCount * 64);
                 return (
-                  <div style={{ overflowX: isMobile ? "auto" : "visible", WebkitOverflowScrolling:"touch", paddingBottom: isMobile ? 4 : 0 }}>
+                  <div className={isMobile ? "edge-fade-x" : ""} style={{ overflowX: isMobile ? "auto" : "visible", WebkitOverflowScrolling:"touch", paddingBottom: isMobile ? 4 : 0 }}>
                     <div style={{ height: isMobile ? 240 : 260, minWidth: isMobile ? mobileMin : "100%" }}>
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={subject.classComparison} margin={{ top:8, right: isMobile ? 8 : 10, bottom: isMobile ? 30 : 20, left: isMobile ? -20 : 0 }}>
@@ -449,7 +449,7 @@ export default function AcademicsOverview() {
               const labelWidth = isMobile ? 56 : 56;
               const scrollMin = isMobile ? (labelWidth + gradeColumns.length * cellMin + gradeColumns.length * 4 + 12) : 460;
               return (
-                <div style={{ overflowX:"auto", paddingBottom:4, WebkitOverflowScrolling:"touch" }}>
+                <div className={isMobile ? "edge-fade-x" : ""} style={{ overflowX:"auto", paddingBottom:4, WebkitOverflowScrolling:"touch" }}>
                   <div style={{ minWidth: scrollMin }}>
                     <div style={{ display:"flex", gap: isMobile ? 4 : 4, marginBottom:4, marginLeft: labelWidth }}>
                       {gradeColumns.map(g => (
@@ -526,7 +526,7 @@ export default function AcademicsOverview() {
                   const perSubjectWidth = Math.max(70, chartBranches.length * 16 + 36);
                   const mobileMin = Math.max(340, subjPerf.length * perSubjectWidth);
                   return (
-                    <div style={{ overflowX: isMobile ? "auto" : "visible", WebkitOverflowScrolling:"touch", paddingBottom: isMobile ? 4 : 0 }}>
+                    <div className={isMobile ? "edge-fade-x" : ""} style={{ overflowX: isMobile ? "auto" : "visible", WebkitOverflowScrolling:"touch", paddingBottom: isMobile ? 4 : 0 }}>
                       <div style={{ height: isMobile ? 290 : 300, minWidth: isMobile ? mobileMin : "100%" }}>
                         <ResponsiveContainer width="100%" height="100%">
                           <BarChart data={subjPerf} margin={{ top:8, right: isMobile ? 8 : 10, bottom: isMobile ? 36 : 20, left: isMobile ? -18 : 0 }}>
