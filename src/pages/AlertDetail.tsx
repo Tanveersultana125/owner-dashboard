@@ -110,7 +110,7 @@ export default function AlertDetailPage() {
       </div>
 
       {/* ── Header Card ─────────────────────────────────────────────────────── */}
-      <div {...tilt3D} style={tilt3DStyle} className="bg-white rounded-[2rem] border border-slate-100 p-8 shadow-sm">
+      <div {...tilt3D} style={tilt3DStyle} className="bg-white rounded-[2rem] border border-slate-100 p-5 sm:p-8 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
           {/* Back + icon + title */}
           <div className="flex items-start gap-6">
@@ -182,7 +182,7 @@ export default function AlertDetailPage() {
       {/* ── Metrics Row ──────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {data.metrics.map((m, i) => (
-          <div key={i} {...tilt3D} className={`${bgClass}/50 border p-8 rounded-[1.5rem]`}
+          <div key={i} {...tilt3D} className={`${bgClass}/50 border p-5 sm:p-8 rounded-[1.5rem]`}
             style={{ borderColor: isCritical ? "#fecaca" : "#fde68a", ...tilt3DStyle }}>
             <p className="text-slate-400 text-[11px] font-bold uppercase tracking-tight mb-4">{m.label}</p>
             <h3 className={`text-4xl font-black tracking-tighter mb-2 ${m.color}`}>{m.value}</h3>
@@ -192,7 +192,7 @@ export default function AlertDetailPage() {
       </div>
 
       {/* ── Issue Description ────────────────────────────────────────────────── */}
-      <div {...tilt3D} style={tilt3DStyle} className="bg-white rounded-[1.5rem] border border-slate-100 p-8">
+      <div {...tilt3D} style={tilt3DStyle} className="bg-white rounded-[1.5rem] border border-slate-100 p-5 sm:p-8">
         <h4 className="text-lg font-bold text-[#1e294b] mb-4">Issue Description</h4>
         <p className="text-slate-600 text-sm leading-relaxed max-w-4xl">{data.description}</p>
       </div>
@@ -200,7 +200,7 @@ export default function AlertDetailPage() {
       {/* ── Chart + Affected Students ─────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Attendance Trend */}
-        <div {...tilt3D} style={tilt3DStyle} className="lg:col-span-7 bg-white p-8 rounded-[1.5rem] border border-slate-100">
+        <div {...tilt3D} style={tilt3DStyle} className="lg:col-span-7 bg-white p-5 sm:p-8 rounded-[1.5rem] border border-slate-100">
           <h4 className="text-base font-bold text-[#1e294b] mb-8">Attendance Trend (Last 7 Days)</h4>
           {hasTrendData ? (
             <div className="h-[250px]">
@@ -267,7 +267,7 @@ export default function AlertDetailPage() {
       {/* ── Actions + Historical ──────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recommended Actions */}
-        <div {...tilt3D} style={tilt3DStyle} className="bg-white p-10 rounded-[2rem] border border-slate-100 shadow-sm">
+        <div {...tilt3D} style={tilt3DStyle} className="bg-white p-5 sm:p-10 rounded-[2rem] border border-slate-100 shadow-sm">
           <h4 className="text-lg font-bold text-[#1e294b] mb-10">Recommended Actions</h4>
           <div className="space-y-6">
             {data.actions.map((action, i) => (
@@ -289,7 +289,7 @@ export default function AlertDetailPage() {
         </div>
 
         {/* Similar Historical Alerts */}
-        <div {...tilt3D} style={tilt3DStyle} className="bg-white p-10 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col gap-6">
+        <div {...tilt3D} style={tilt3DStyle} className="bg-white p-5 sm:p-10 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col gap-6">
           <h4 className="text-lg font-bold text-[#1e294b]">Similar Historical Alerts</h4>
 
           {data.historicalAlerts.length === 0 ? (

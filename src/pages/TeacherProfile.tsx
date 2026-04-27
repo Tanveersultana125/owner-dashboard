@@ -4,6 +4,7 @@ import { db, auth } from "@/lib/firebase";
 import { collection, getDocs, query, where, doc, getDoc } from "firebase/firestore";
 import { ArrowLeft, Loader2, AlertCircle, Users, BookOpen, TrendingUp, Mail, Phone, Calendar, Star, Award, BarChart3, Activity, FileText } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 // ── Tokens ───────────────────────────────────────────────────────────────────
 const T = {
@@ -40,6 +41,7 @@ const StarRow=({rating}:{rating:number})=><div style={{display:"flex",gap:2}}>{[
 export default function TeacherProfile() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   const [loading, setLoading] = useState(true);
   const [teacher, setTeacher] = useState<any>(null);
@@ -187,7 +189,7 @@ export default function TeacherProfile() {
   const hasTimeline = timeline.some(t=>t.score>0);
 
   return (
-    <div style={{minHeight:"100vh",background:T.bg,fontFamily:"'Inter',-apple-system,sans-serif",padding:"20px 24px 60px"}}>
+    <div style={{minHeight:"100vh",background:T.bg,fontFamily:"'Inter',-apple-system,sans-serif",padding: isMobile ? "12px 12px 40px" : "20px 24px 60px"}}>
       {/* Top */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24}}>
         <button onClick={()=>navigate("/teachers")} style={{display:"flex",alignItems:"center",gap:6,padding:"8px 16px",borderRadius:10,border:`1px solid ${T.bdr}`,background:T.white,color:T.ink2,fontSize:13,fontWeight:500,cursor:"pointer"}}><ArrowLeft size={14}/>Back to Teachers</button>
@@ -195,7 +197,7 @@ export default function TeacherProfile() {
       </div>
 
       {/* ═══ HERO 3-COL ═══ */}
-      <div style={{display:"grid",gridTemplateColumns:"1fr 280px 1fr",gap:20,marginBottom:20}}>
+      <div style={{display:"grid",gridTemplateColumns: isMobile ? "1fr" : "1fr 280px 1fr",gap: isMobile ? 14 : 20,marginBottom:20}}>
         {/* LEFT */}
         <div style={{display:"flex",flexDirection:"column",gap:16}}>
           <Card title="Teaching Performance">

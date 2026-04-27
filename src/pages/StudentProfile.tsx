@@ -4,6 +4,7 @@ import { ArrowLeft, Printer, MessageSquare, AlertCircle, Loader2, ChevronLeft, C
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, RadarChart, PolarGrid, PolarAngleAxis, Radar } from "recharts";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 // ── Tokens ───────────────────────────────────────────────────────────────────
 const T = {
@@ -61,6 +62,7 @@ const DetailLink = () => <span style={{ fontSize: 11, color: T.blue, fontWeight:
 const StudentProfile = () => {
   const { id: studentId } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   const [loading, setLoading] = useState(true);
   const [student, setStudent] = useState<any>(null);
@@ -307,7 +309,7 @@ const StudentProfile = () => {
   }));
 
   return (
-    <div style={{ minHeight: "100vh", background: T.bg, padding: "20px 24px 60px", fontFamily: "'Inter','Plus Jakarta Sans',-apple-system,sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: T.bg, padding: isMobile ? "12px 12px 40px" : "20px 24px 60px", fontFamily: "'Inter','Plus Jakarta Sans',-apple-system,sans-serif" }}>
 
       {/* ═══ TOP BAR ══════════════════════════════════════════════════════════ */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
@@ -325,7 +327,7 @@ const StudentProfile = () => {
       </div>
 
       {/* ═══ HERO: 3-COLUMN ══════════════════════════════════════════════════ */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 280px 1fr", gap: 20, marginBottom: 20 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 280px 1fr", gap: isMobile ? 14 : 20, marginBottom: 20 }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <Card title="Academic Performance">
             <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 16 }}>
@@ -493,7 +495,7 @@ const StudentProfile = () => {
       </Card>
 
       {/* ═══ ASSIGNMENTS + RISK ASSESSMENT ═══ */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 20 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? 14 : 20, marginBottom: 20 }}>
         <Card title={`Assignments · ${m.subCount}/${m.asgCount}`} action={<span style={{ fontSize: 11, color: T.blue, fontWeight: 500, cursor: "pointer" }}>View All →</span>}>
           {[...assignments].sort((a, b) => (toDate(b.dueDate)?.getTime() || 0) - (toDate(a.dueDate)?.getTime() || 0)).slice(0, 5).map(a => {
             const sub = submissions.find((s: any) => s.assignmentId === a.id);
@@ -527,7 +529,7 @@ const StudentProfile = () => {
       </div>
 
       {/* ═══ ATTENDANCE CALENDAR + SUPPORT ACTIONS ═══ */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 20 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? 14 : 20, marginBottom: 20 }}>
         <Card title="Attendance Calendar" action={<span style={{ fontSize: 11, color: T.ink3 }}>Daily attendance record</span>}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16, marginBottom: 14 }}>
             <button onClick={() => setCalMonth(new Date(calYear, calMon - 1))} style={{ background: "none", border: "none", cursor: "pointer", color: T.ink3 }}><ChevronLeft size={16} /></button>
@@ -598,7 +600,7 @@ const StudentProfile = () => {
       </div>
 
       {/* ═══ INCIDENTS + OVERVIEW ═══ */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 20 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? 14 : 20, marginBottom: 20 }}>
         <Card title="Incidents" action={<DetailLink />}>
           {incidents.length === 0 ? (
             <div style={{ textAlign: "center", padding: "20px 0" }}>
@@ -642,7 +644,7 @@ const StudentProfile = () => {
       </div>
 
       {/* ═══ COMMUNICATIONS + SCORE HISTORY ═══ */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 20 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? 14 : 20, marginBottom: 20 }}>
         <Card title={`Communications · ${parentNotes.length} entries`} action={<span style={{ fontSize: 11, color: T.blue, cursor: "pointer" }}>View All →</span>}>
           {parentNotes.slice(0, 3).map(n => (
             <div key={n.id} style={{ padding: "12px 0", borderBottom: `1px solid ${T.s2}` }}>
