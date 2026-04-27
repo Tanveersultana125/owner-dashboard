@@ -320,7 +320,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <div ref={bellRef} className="relative flex items-center">
             <button
               onClick={() => setBellOpen(v => !v)}
-              className="relative w-9 h-9 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center hover:bg-slate-100 transition-all"
+              className="relative w-11 h-11 sm:w-9 sm:h-9 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center hover:bg-slate-100 transition-all"
             >
               <Bell className="w-4 h-4 text-slate-500" />
               {unreadCount > 0 && (
@@ -420,7 +420,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           {/* Circular avatar */}
           <button
             onClick={() => navigate("/settings")}
-            className="w-9 h-9 rounded-full bg-[#1e294b] text-white flex items-center justify-center text-[11px] font-bold shadow-lg shadow-slate-900/10 hover:scale-105 active:scale-95 transition-all cursor-pointer uppercase"
+            className="w-11 h-11 sm:w-9 sm:h-9 rounded-full bg-[#1e294b] text-white flex items-center justify-center text-[11px] font-bold shadow-lg shadow-slate-900/10 hover:scale-105 active:scale-95 transition-all cursor-pointer uppercase"
             title="Account settings"
           >
             {getInitials(schoolData?.ownerName)}
@@ -430,7 +430,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <button
             onClick={handleLogout}
             title="Sign out"
-            className="w-9 h-9 rounded-xl flex items-center justify-center text-rose-500 hover:bg-rose-50 transition-all"
+            className="w-11 h-11 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-rose-500 hover:bg-rose-50 transition-all"
           >
             <LogOut className="w-4 h-4" />
           </button>
