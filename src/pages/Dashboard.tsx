@@ -440,9 +440,11 @@ export default function Dashboard() {
         fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
         background: "#EEF4FF",
         minHeight: "100vh",
-        margin: isMobile ? "-16px -16px 0" : "-40px -40px 0",
-        padding: isMobile ? "16px 16px 32px" : "24px 32px 40px",
-        maxWidth: "100vw",
+        // Mobile: no negative margin (was breaking layout into narrow right column).
+        margin: isMobile ? 0 : "-32px -32px 0",
+        padding: isMobile ? "8px 0 32px" : "24px 32px 40px",
+        width: "100%",
+        maxWidth: "100%",
         overflowX: "hidden",
         boxSizing: "border-box",
       }}

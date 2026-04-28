@@ -443,7 +443,7 @@ export default function TeacherPerformance() {
   /* ─────────────────────────────────────────────────── */
   if (loading) {
     return (
-      <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:260, background:"#EEF4FF", minHeight:"100vh", margin: isMobile ? "-12px -12px 0" : "-40px -40px 0" }}>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:260, background:"#EEF4FF", minHeight:"100vh", margin: isMobile ? 0 : "-32px -32px 0", width: "100%", maxWidth: "100%", boxSizing: "border-box" }}>
         <Loader2 className="animate-spin" size={32} color={B1}/>
       </div>
     );
@@ -460,7 +460,7 @@ export default function TeacherPerformance() {
           style={{
             fontFamily:"'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
             background:"#EEF4FF", minHeight:"100vh",
-            margin: isMobile ? "-12px -12px 0" : "-40px -40px 0",
+            margin: isMobile ? 0 : "-32px -32px 0", width: "100%", maxWidth: "100%", boxSizing: "border-box",
             padding: isMobile ? "14px 14px 28px" : "24px 32px 40px",
           }}
         >
@@ -791,7 +791,7 @@ export default function TeacherPerformance() {
         style={{
           fontFamily:"'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
           background:"#EEF4FF", minHeight:"100vh",
-          margin: isMobile ? "-12px -12px 0" : "-40px -40px 0",
+          margin: isMobile ? 0 : "-32px -32px 0", width: "100%", maxWidth: "100%", boxSizing: "border-box",
           padding: isMobile ? "16px 14px 28px" : "24px 32px 40px",
         }}
       >

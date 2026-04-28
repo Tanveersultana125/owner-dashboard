@@ -28,23 +28,65 @@ export const SHADOW_SM = "0 2px 4px rgba(0,85,255,.10), 0 6px 14px rgba(0,85,255
 export const SHADOW_LG = "0 4px 8px rgba(0,85,255,.12), 0 12px 24px rgba(0,85,255,.16), 0 28px 56px rgba(0,85,255,.18)";
 export const SHADOW_BTN = "0 6px 22px rgba(0,85,255,.40), 0 2px 5px rgba(0,85,255,.20)";
 
+/*
+ * Page-shell styling.
+ *
+ * AppLayout's main content wrapper has Tailwind padding `p-4` on mobile
+ * (= 16px each side) and `lg:px-8 lg:pt-6 lg:pb-8` on desktop (= 32px sides).
+ * To make pages feel edge-to-edge we apply matching NEGATIVE margins so the
+ * shell breaks out of that padding, then re-add our own internal padding.
+ *
+ * Critical guards (added 2026-04-27 after a mobile overflow regression):
+ *   • `boxSizing: border-box`  — padding stays inside the box, never widens it.
+ *   • `width: auto`            — the negative margin sets the visual extent;
+ *                                width auto lets the box fit inside parent.
+ *   • `maxWidth: 100vw`        — hard ceiling so a rogue child can never push
+ *                                the shell past the viewport on mobile.
+ *   • `overflowX: hidden`      — final clip, in case some descendant ignores
+ *                                the rules above (charts, fixed-width tables).
+ *
+ * MAGIC NUMBERS — keep in sync with AppLayout's <main> wrapper padding:
+ *   mobile  parent p-4  = 16px → margin: -16px
+ *   desktop parent lg:px-8 = 32px → margin: -32px
+ */
 export const pageShellStyle: React.CSSProperties = {
   fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
   background: "#EEF4FF",
   minHeight: "100vh",
-  margin: "-40px -40px 0",
+  margin: "-32px -32px 0",
   padding: "24px 32px 40px",
+  boxSizing: "border-box",
+  width: "auto",
+  maxWidth: "100vw",
+  overflowX: "hidden",
 };
 
-/* Hook-based responsive version of pageShellStyle. Use instead of importing pageShellStyle directly. */
+/* Hook-based responsive version of pageShellStyle. Use instead of importing pageShellStyle directly.
+ *
+ * IMPORTANT MOBILE FIX (2026-04-27): The previous "negative margin to break out
+ * of parent padding" trick (margin: -16px) collapsed on mobile in some
+ * Chromium / WebKit configurations — the page shell ended up rendered as a
+ * narrow column on the right. The fix is to NOT use negative margins on
+ * mobile at all. Instead, we let AppLayout's <main> p-4 padding stand and
+ * use width:100% inside it. We lose the strict edge-to-edge feel on mobile
+ * but the layout becomes bullet-proof.
+ *
+ * Desktop still uses the negative-margin trick because there it works
+ * reliably and the visual benefit is bigger (page hero feels more premium).
+ */
 export function usePageShellStyle(): React.CSSProperties {
   const isMobile = useIsMobile();
   return {
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
     background: "#EEF4FF",
     minHeight: "100vh",
-    margin: isMobile ? "-12px -12px 0" : "-40px -40px 0",
-    padding: isMobile ? "16px 14px 28px" : "24px 32px 40px",
+    // Mobile: NO negative margin. Just sit inside parent padding with full width.
+    margin: isMobile ? 0 : "-32px -32px 0",
+    padding: isMobile ? "8px 0 28px" : "24px 32px 40px",
+    boxSizing: "border-box",
+    width: "100%",
+    maxWidth: "100%",
+    overflowX: "hidden",
   };
 }
 

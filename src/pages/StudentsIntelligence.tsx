@@ -493,7 +493,11 @@ export default function StudentsIntelligence() {
           fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
           background: "#EEF4FF",
           minHeight: "100vh",
-          margin: isMobile ? "-12px -12px 0" : "-40px -40px 0",
+          margin: isMobile ? 0 : "-32px -32px 0",
+          width: "100%",
+          maxWidth: "100%",
+          boxSizing: "border-box",
+          overflowX: "hidden",
           padding: isMobile ? "16px 14px 28px" : "24px 32px 40px",
         }}
       >
