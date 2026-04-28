@@ -267,58 +267,140 @@ button {
   line-height: 1.4;
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   APPLE-STYLE COLOR REFINEMENT (subtle elevation, calm accents)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Soft, low-noise card elevation */
+.bg-white[class*="rounded-"]:not(.dash3d):not(.dash-tile):not(.dash-card),
+.bg-card[class*="rounded-"]:not(.dash3d):not(.dash-tile):not(.dash-card),
+.stat-card {
+  background-color: hsl(var(--card));
+  border-color: hsl(220 13% 92%);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 1px 3px rgba(15, 23, 42, 0.03);
+}
+
+/* Strip loud gradient backgrounds and over-saturated hero strips */
+[class*="bg-gradient-to"]:not([class*="from-primary"]):not(.allow-gradient) {
+  background-image: none;
+}
+
+/* Calm hover shadow override (matches the new neutral palette) */
+@media (hover: hover) and (pointer: fine) {
+  .bg-white[class*="rounded-"]:not(.dash3d):not(.dash-tile):not(.dash-card):hover,
+  .bg-card[class*="rounded-"]:not(.dash3d):not(.dash-tile):not(.dash-card):hover,
+  div[class*="shadow-sm"][class*="rounded-"]:not(.dash3d):not(.dash-tile):not(.dash-card):hover,
+  .stat-card:hover {
+    box-shadow:
+      0 8px 24px rgba(15, 23, 42, 0.06),
+      0 2px 6px rgba(15, 23, 42, 0.04),
+      0 0 0 1px rgba(15, 23, 42, 0.04) !important;
+    border-color: hsl(220 13% 86%) !important;
+  }
+}
+
+/* Tone down vivid Tailwind brand colors to Apple-calm equivalents */
+.bg-blue-500, .bg-blue-600, .bg-blue-700,
+[class*="bg-[#1e3a8a]"] {
+  background-color: hsl(var(--primary)) !important;
+}
+.text-blue-500, .text-blue-600, .text-blue-700 {
+  color: hsl(var(--primary)) !important;
+}
+.bg-green-500, .bg-green-600 {
+  background-color: hsl(var(--success)) !important;
+}
+.text-green-500, .text-green-600 {
+  color: hsl(var(--success)) !important;
+}
+.bg-red-500, .bg-red-600 {
+  background-color: hsl(var(--destructive)) !important;
+}
+.text-red-500, .text-red-600 {
+  color: hsl(var(--destructive)) !important;
+}
+.bg-orange-500, .bg-yellow-500, .bg-amber-500 {
+  background-color: hsl(var(--warning)) !important;
+}
+.text-orange-500, .text-yellow-500, .text-amber-500 {
+  color: hsl(var(--warning)) !important;
+}
+
+/* Subtle tinted status backgrounds (replace neon pastels) */
+.bg-green-50, .bg-green-100 { background-color: hsl(145 55% 96%) !important; }
+.bg-red-50,   .bg-red-100   { background-color: hsl(4 74% 97%) !important; }
+.bg-orange-50,.bg-orange-100,.bg-amber-50,.bg-amber-100,.bg-yellow-50,.bg-yellow-100 {
+  background-color: hsl(32 85% 96%) !important;
+}
+.bg-blue-50,  .bg-blue-100  { background-color: hsl(211 100% 97%) !important; }
+
+/* Borders — uniform Apple-quiet hairline */
+.border, .border-t, .border-b, .border-l, .border-r,
+.border-gray-100, .border-gray-200, .border-slate-100, .border-slate-200 {
+  border-color: hsl(var(--border));
+}
+
 @layer base {
   :root {
-    --background: 210 20% 98%;
-    --foreground: 220 30% 15%;
+    /* ─── Apple-style neutral palette ──────────────────────────
+       Background: cool off-white (#F5F5F7-ish)
+       Surfaces:   pure white cards on the off-white canvas
+       Text:       near-black with a touch of cool, soft mute */
+    --background: 220 14% 96%;
+    --foreground: 220 9% 12%;
 
     --card: 0 0% 100%;
-    --card-foreground: 220 30% 15%;
+    --card-foreground: 220 9% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 30% 15%;
+    --popover-foreground: 220 9% 12%;
 
-    --primary: 220 70% 30%;
-    --primary-foreground: 210 20% 98%;
+    /* Single accent: Apple system blue */
+    --primary: 211 100% 45%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 220 13% 95%;
+    --secondary-foreground: 220 9% 18%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 220 13% 95%;
+    --muted-foreground: 220 5% 46%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 220 13% 95%;
+    --accent-foreground: 220 9% 18%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    /* Muted, non-neon status colors */
+    --destructive: 4 74% 52%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 211 100% 45%;
 
     --radius: 0.5rem;
 
-    --sidebar-bg: 220 70% 30%;
-    --sidebar-fg: 220 30% 85%;
-    --sidebar-active: 220 80% 45%;
-    --sidebar-hover: 220 60% 35%;
+    /* Sidebar — deep premium navy / charcoal */
+    --sidebar-bg: 222 24% 12%;
+    --sidebar-fg: 220 12% 78%;
+    --sidebar-active: 211 100% 50%;
+    --sidebar-hover: 222 20% 18%;
 
-    --success: 142 71% 45%;
+    --success: 145 55% 38%;
     --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
+    --warning: 32 85% 50%;
     --warning-foreground: 0 0% 100%;
-    --info: 210 100% 50%;
+    --info: 211 100% 45%;
     --info-foreground: 0 0% 100%;
 
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-background: 222 24% 12%;
+    --sidebar-foreground: 220 12% 78%;
+    --sidebar-primary: 211 100% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 222 20% 18%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 222 20% 20%;
+    --sidebar-ring: 211 100% 50%;
   }
 
   .dark {
