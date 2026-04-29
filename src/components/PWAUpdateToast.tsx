@@ -13,7 +13,8 @@ async function loadRegister() {
 export default function PWAUpdateToast() {
   const [needRefresh, setNeedRefresh] = useState(false);
   const [offlineReady, setOfflineReady] = useState(false);
-  const [updateFn, setUpdateFn] = useState<(() => Promise<void>) | null>(null);
+  const [updateFn, setUpdateFn] = useState<((reload?: boolean) => Promise<void>) | null>(null);
+  const [reloading, setReloading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -62,10 +63,23 @@ export default function PWAUpdateToast() {
             </p>
             <div className="flex items-center gap-2 mt-3">
               <button
-                onClick={() => updateFn && updateFn()}
-                className="px-3 py-1.5 rounded-lg bg-[#1e3a8a] text-white text-xs font-bold hover:bg-blue-900 transition-colors touch-target"
+                onClick={async () => {
+                  if (!updateFn || reloading) return;
+                  setReloading(true);
+                  try {
+                    await updateFn(true);
+                    // Safety net: if the SW didn't trigger a reload (e.g. no
+                    // controller, or browser swallowed it), force one.
+                    setTimeout(() => window.location.reload(), 1500);
+                  } catch (err) {
+                    console.warn("[PWA] update failed, hard-reloading:", err);
+                    window.location.reload();
+                  }
+                }}
+                disabled={reloading}
+                className="px-3 py-1.5 rounded-lg bg-[#1e3a8a] text-white text-xs font-bold hover:bg-blue-900 transition-colors touch-target disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                Reload
+                {reloading ? "Reloading…" : "Reload"}
               </button>
               <button
                 onClick={() => setNeedRefresh(false)}
