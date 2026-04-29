@@ -21,6 +21,18 @@ export default {
       "2xl": "1536px",
     },
     extend: {
+      fontFamily: {
+        sans: [
+          "SF Pro Display",
+          "-apple-system",
+          "BlinkMacSystemFont",
+          "SF Pro Text",
+          "Helvetica Neue",
+          "Helvetica",
+          "Arial",
+          "sans-serif",
+        ],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
