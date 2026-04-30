@@ -298,9 +298,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           >
             <Menu className="w-6 h-6" />
           </button>
-          <div className="w-8 h-8 bg-[#1e3a8a] rounded-xl flex items-center justify-center shadow-lg shadow-blue-900/10 shrink-0">
-            <GraduationCap className="w-4 h-4 text-white" />
-          </div>
+          <img
+            src="/edullent-icon.png"
+            alt="Edullent"
+            className="w-8 h-8 rounded-xl object-contain shadow-lg shadow-blue-900/10 shrink-0"
+            draggable={false}
+          />
           <div
             title={schoolData?.schoolName || "EDULLENT"}
             className="min-w-0 flex flex-col leading-tight"
