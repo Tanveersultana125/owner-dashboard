@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { db, auth } from "@/lib/firebase";
 import { collection, getDocs, query, where } from "firebase/firestore";
+import { bucketFeeHistory, normalizeFeeDoc } from "@/lib/feeHistoryService";
 import {
   Search, Loader2, CheckCircle, XCircle, IndianRupee, ShieldAlert,
   TrendingDown, Brain, MessageCircle, Building2, ChevronDown, Filter,
@@ -22,8 +23,6 @@ import {
   PieChart, Pie, Cell, Legend, LineChart, Line,
 } from "recharts";
 import { Input } from "@/components/ui/input";
-
-const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
 // ── Risk of future default scoring ─────────────────────────────────────────
 // Inputs: daysOverdue, previousLateCount, totalDue amount
@@ -283,24 +282,13 @@ export default function FinanceFees() {
     };
   }, [defaulters, feesFiltered]);
 
-  /* ── history (6-month collection vs pending) ──────────── */
+  /* ── history (6-month collection vs pending) ──────────────────────────────
+        Linked to feeHistoryService.bucketFeeHistory — same shape & math the
+        Dashboard's Revenue Trend uses. Branch filtering happens upstream via
+        feesFiltered (by branchName), so we pass no branchId here. */
   const historyData = useMemo(() => {
-    const now = new Date();
-    const months = Array.from({ length: 6 }, (_, i) => {
-      const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1);
-      return { label: MONTH_NAMES[d.getMonth()], month: d.getMonth(), year: d.getFullYear() };
-    });
-    return months.map(({ label, month, year }) => {
-      const monthFees = feesFiltered.filter(f => {
-        const ts = f.paidAt?.toDate?.() || f.createdAt?.toDate?.() || null;
-        return ts && ts.getMonth() === month && ts.getFullYear() === year;
-      });
-      const collected = monthFees.filter(f => (f.status||"").toLowerCase()==="paid")
-        .reduce((s,f) => s + (parseFloat(f.amount ?? f.totalAmount ?? "0") || 0), 0);
-      const pending   = monthFees.filter(f => (f.status||"").toLowerCase()!=="paid")
-        .reduce((s,f) => s + (parseFloat(f.amount ?? f.totalAmount ?? "0") || 0), 0);
-      return { month: label, collected: Math.round(collected / 1000), pending: Math.round(pending / 1000) };
-    });
+    const records = feesFiltered.map(f => normalizeFeeDoc(f as Record<string, unknown>));
+    return bucketFeeHistory(records);
   }, [feesFiltered]);
 
   /* ── branch revenue (always all branches, regardless of filter) ── */
