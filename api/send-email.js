@@ -87,8 +87,55 @@ export default async function handler(req, res) {
         </div>
       `,
     };
-  } else {
-    // Invitation email (default)
+  } else if (type === "principal_notify") {
+    /* Owner → Principal notification (e.g. fee defaulter alerts from
+       FeeStructureOverview). Mirrors the in-app notification stored in
+       owner_to_principal_notes — same subject + body — so the principal
+       gets the message via BOTH channels. CTA points to the principal
+       dashboard's notifications view. */
+    if (!sSubject) return res.status(400).json({ error: "Missing subject." });
+    const safeBody = escapeHtml(sBody).replace(/\n/g, "<br>");
+    const safeSubj = escapeHtml(sSubject);
+    const safeSchool = escapeHtml(sSchool || "your school");
+
+    emailPayload = {
+      from: "Edullent Notifications <noreply@edulent.dgion.com>",
+      to: [to],
+      subject: `[ACTION REQUIRED] ${sSubject}`,
+      html: `
+        <div style="font-family:sans-serif;max-width:600px;margin:auto;padding:0;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">
+          <div style="background:#dc2626;padding:24px 28px;">
+            <h1 style="color:#fff;margin:0;font-size:20px;font-weight:700;letter-spacing:0.5px;">EDULLENT</h1>
+            <p style="color:#fecaca;margin:4px 0 0;font-size:13px;">Action Required — Owner Notification</p>
+          </div>
+          <div style="padding:28px;background:#fff;">
+            <h2 style="color:#1e293b;font-size:17px;margin:0 0 8px;">${safeSubj}</h2>
+            <p style="color:#64748b;font-size:12px;margin:0 0 18px;">From the Owner Office of <strong>${safeSchool}</strong></p>
+            <div style="background:#fef2f2;border-left:3px solid #dc2626;padding:16px 18px;border-radius:0 8px 8px 0;color:#334155;font-size:14px;line-height:1.6;white-space:pre-wrap;">
+              ${safeBody}
+            </div>
+            <div style="margin-top:28px;text-align:center;">
+              <a href="https://principal-dashboard-seven.vercel.app/notifications"
+                 style="background:#dc2626;color:#fff;padding:12px 28px;text-decoration:none;border-radius:8px;font-weight:700;font-size:13px;display:inline-block;">
+                View in Dashboard
+              </a>
+            </div>
+            <p style="color:#94a3b8;font-size:11px;margin:24px 0 0;text-align:center;">
+              This message has also been delivered to your dashboard inbox.
+            </p>
+          </div>
+          <div style="background:#f1f5f9;padding:14px 28px;text-align:center;">
+            <p style="color:#94a3b8;font-size:11px;margin:0;">Powered by Edullent Cloud Architecture</p>
+          </div>
+        </div>
+      `,
+    };
+  } else if (type === "invitation" || type == null || type === "") {
+    /* Invitation email — kept as the catch-all for legacy callers that
+       didn't pass `type` (older sendInvitationEmail wrappers). New code
+       MUST pass `type: "invitation"` explicitly. After all callers are
+       migrated, the `type == null` branch can be removed and the `else`
+       below will reject anything that doesn't name a known type. */
     if (!sName) return res.status(400).json({ error: "Missing name." });
     const safeName   = escapeHtml(sName);
     const safeBranch = escapeHtml(sBranch || "Main");
@@ -129,6 +176,15 @@ export default async function handler(req, res) {
         </div>
       `,
     };
+  } else {
+    /* Unknown type — refuse instead of silently rendering the invitation
+       template. Previously the `else` was a catch-all, so a typo'd type
+       (e.g. "principal_notifyy") OR an unknown type sent by a NEWER
+       client to an OLDER deployment would silently fire the invite
+       template with garbage values ("Welcome, undefined!" + invite CTA
+       to a confused recipient). Reject explicitly so the caller sees
+       the actual problem instead of a misleading email arriving. */
+    return res.status(400).json({ error: `Unknown email type: ${String(type).slice(0, 40)}` });
   }
 
   // 6) Send via Resend — log failures server-side, return generic error to client

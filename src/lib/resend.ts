@@ -34,6 +34,35 @@ export const sendCriticalAlertEmail = async ({
   }
 };
 
+/**
+ * Send Owner → Principal notification email (e.g. fee defaulter alerts).
+ * Mirrors the in-app notification stored in `owner_to_principal_notes` —
+ * principal receives via BOTH dashboard inbox AND email. Fire-and-forget
+ * pattern at call site (don't block UX on email delivery).
+ */
+export const sendPrincipalNotificationEmail = async ({
+  to, subject, body, schoolName,
+}: {
+  to: string; subject: string; body: string; schoolName: string;
+}) => {
+  try {
+    const response = await fetch("/api/send-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(await authHeader()) },
+      body: JSON.stringify({
+        type: "principal_notify",
+        to, subject, body, schoolName,
+      }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (response.ok) return { success: true, data };
+    return { success: false, error: data?.error || `Server error (${response.status})` };
+  } catch (error: any) {
+    console.error("[sendPrincipalNotificationEmail] error:", error);
+    return { success: false, error: "network_error" };
+  }
+};
+
 export const sendInvitationEmail = async ({
   to, name, branch, schoolName,
 }: {
@@ -43,7 +72,10 @@ export const sendInvitationEmail = async ({
     const response = await fetch("/api/send-email", {
       method: "POST",
       headers: { "Content-Type": "application/json", ...(await authHeader()) },
-      body: JSON.stringify({ to, name, branch, schoolName }),
+      // Explicit type — server now refuses unknown types instead of
+      // silently rendering this template, so legacy implicit-type
+      // callers would break. Always pass type for clarity.
+      body: JSON.stringify({ type: "invitation", to, name, branch, schoolName }),
     });
 
     const contentType = response.headers.get("content-type") || "";

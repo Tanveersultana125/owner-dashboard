@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { db, auth } from "@/lib/firebase";
-import { collection, getDocs, query, where, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, getDocs, query, where, addDoc, doc, getDoc, serverTimestamp } from "firebase/firestore";
+import { sendPrincipalNotificationEmail } from "@/lib/resend";
 import {
   Download, Loader2, Building2, DollarSign, Calendar, Filter,
   ChevronDown, FileSpreadsheet, AlertCircle, TrendingUp, X, Users,
@@ -222,6 +223,41 @@ export default function FeeStructureOverview() {
       );
       setNotifyState(null);
       setNotifyMessage("");
+
+      /* Fire-and-forget email — principal gets the same notification via
+         BOTH dashboard inbox AND email. Done AFTER the modal closes so
+         email-network latency doesn't block the UI. Failures show a
+         secondary toast but don't roll back the in-app notification —
+         dashboard delivery already succeeded, that's the source of truth.
+         School name fetched at notify-time (single doc read) instead of
+         being kept in state — avoids a separate page-load read every
+         time the page mounts. */
+      (async () => {
+        if (!principal.email) {
+          toast.warning("Notification saved — but principal has no email on file. Email skipped.");
+          return;
+        }
+        let schoolName = "your school";
+        try {
+          const sSnap = await getDoc(doc(db, "schools", uid));
+          if (sSnap.exists()) {
+            const sd = sSnap.data() as any;
+            schoolName = sd.schoolName || sd.name || schoolName;
+          }
+        } catch { /* fall back to default — non-critical */ }
+
+        const emailRes = await sendPrincipalNotificationEmail({
+          to:      principal.email,
+          subject,
+          body:    notifyMessage,
+          schoolName,
+        });
+        if (!emailRes.success) {
+          toast.warning(`Saved to dashboard, but email delivery failed (${emailRes.error}).`);
+        } else {
+          toast.success(`Email also delivered to ${principal.email}`);
+        }
+      })();
     } catch (e: any) {
       console.error("[FeeStructureOverview] notify error:", e);
       toast.error(e.message || "Failed to send notification");

@@ -319,16 +319,47 @@ export default function Dashboard() {
         });
         setRiskByBranch(riskMap);
 
-        /* 5+6. Fees — single Firestore read, derive stats + history + timeline
-                buckets from the same docs. Replaces three separate reads
-                (fetchFeeStats + raw getDocs + fetchFeeHistory) that all hit the
-                same query. ~66% read reduction on this section. */
+        /* 5+6. Fees — read BOTH `fees` (per-record) AND `fee_structure`
+                (per-class Excel uploads with embedded studentRows) per
+                owner_dashboard_alternate_data_sources memory rule. Schools
+                using only the principal-Excel flow have ZERO `fees` docs;
+                without fee_structure they'd see "0%" collection rate and
+                an empty Revenue Trend even with paid data on disk.
+                Each studentRow synthesizes up to 2 RawFeeRecord entries
+                (paid portion + pending portion) sharing the parent doc's
+                timestamp for the 6-month history bucketing. */
         let feeRecords: ReturnType<typeof normalizeFeeDoc>[] = [];
         let feesDocs: any[] = [];
         try {
-          const feesSnap = await getDocs(query(collection(db, "fees"), where("schoolId", "==", uid)));
+          const [feesSnap, feeStructSnap] = await Promise.all([
+            getDocs(query(collection(db, "fees"),          where("schoolId", "==", uid))),
+            getDocs(query(collection(db, "fee_structure"), where("schoolId", "==", uid)))
+              .catch(err => {
+                console.warn("[Dashboard] fee_structure fetch failed:", err);
+                return { docs: [] as any[] } as any;
+              }),
+          ]);
           feesDocs = feesSnap.docs;
           feeRecords = feesDocs.map(d => normalizeFeeDoc(d.data() as Record<string, unknown>));
+
+          // Synthesize records from fee_structure.studentRows
+          feeStructSnap.docs.forEach((d: any) => {
+            const data = d.data() as any;
+            const rows = (data?.studentRows || []) as any[];
+            if (!Array.isArray(rows) || rows.length === 0) return;
+            const branchId = String(data.branchId || "");
+            // Use parent doc's updatedAt/createdAt as the row timestamp —
+            // studentRows lack per-row dates. Falls back to "now" only as
+            // a last resort so revenue trend at least gets one bucket.
+            const docDate = parseDate(data.updatedAt) || parseDate(data.createdAt) || new Date();
+            rows.forEach(st => {
+              const paid    = Number(st?.paid)    || 0;
+              const pending = Number(st?.pending) || 0;
+              if (paid > 0)    feeRecords.push({ branchId, status: "paid",    amount: paid,    date: docDate });
+              if (pending > 0) feeRecords.push({ branchId, status: "pending", amount: pending, date: docDate });
+            });
+          });
+
           const feeStats = computeFeeStats(feeRecords);
           setFeeRate(feeStats.collectionRate);
           setFeeCollectedAmt(feeStats.collectedAmt);

@@ -271,22 +271,38 @@ export async function fetchAllPredictions(opts: { force?: boolean } = {}): Promi
        student would NOT join under naive `data.studentId || data.studentEmail`
        keying — the student would appear as two separate predictions.
 
-       Pre-pass through enrollments (sorted oldest→newest, so newer wins
-       when there's a conflict) to build a (studentId | studentEmail | docId)
-       → canonical map. canonical = whichever id form the most-recent
-       enrollment carries. Downstream score / attendance / fee lookups
-       then route any key-form to the canonical key.
+       Strategy: pre-pass through enrollments to build an alias map where
+       any (studentId | studentEmail | docId) routes to a canonical key.
+
+       ⚠ ORDERING + WRITE SEMANTICS MATTER:
+         - Sort enrollments by RICHNESS DESC. An enrollment carrying BOTH
+           studentId AND studentEmail establishes the strongest bridge,
+           so it must claim alias entries FIRST.
+         - First-write-wins via `!aliasToCanonical.has(key)`. Without this,
+           a later email-only enrollment would overwrite the bridge from
+           a richer enrollment — silently re-introducing the very bug
+           this map exists to prevent. (Previous version sorted by
+           timestamp ASC and last-write-wins, which had this bug.)
+
+       Limitation: if NO enrollment ever carries both forms simultaneously,
+       there's no information to bridge them. That's a school-level data
+       hygiene issue no client-side merge can solve.
        ──────────────────────────────────────────────────────────────────── */
-    const sortedEnrollDocs = [...enrollSnap.docs].sort(
-      (a: any, b: any) => tsFromEnrollment(a.data()) - tsFromEnrollment(b.data())
-    );
+    const richnessSorted = [...enrollSnap.docs].sort((a: any, b: any) => {
+      const ad = a.data() as any;
+      const bd = b.data() as any;
+      // studentId weighs more than studentEmail (more specific, less collidable)
+      const aScore = (ad.studentId ? 2 : 0) + (ad.studentEmail ? 1 : 0);
+      const bScore = (bd.studentId ? 2 : 0) + (bd.studentEmail ? 1 : 0);
+      return bScore - aScore;
+    });
     const aliasToCanonical = new Map<string, string>();
-    sortedEnrollDocs.forEach((d: any) => {
+    richnessSorted.forEach((d: any) => {
       const data = d.data() as any;
       const canonical = data.studentId || data.studentEmail || d.id;
-      if (data.studentId)    aliasToCanonical.set(data.studentId,    canonical);
-      if (data.studentEmail) aliasToCanonical.set(data.studentEmail, canonical);
-      aliasToCanonical.set(d.id, canonical);
+      if (data.studentId    && !aliasToCanonical.has(data.studentId))    aliasToCanonical.set(data.studentId,    canonical);
+      if (data.studentEmail && !aliasToCanonical.has(data.studentEmail)) aliasToCanonical.set(data.studentEmail, canonical);
+      if (!aliasToCanonical.has(d.id)) aliasToCanonical.set(d.id, canonical);
     });
     const canonicalKey = (k: string): string => aliasToCanonical.get(k) || k;
 
@@ -426,8 +442,16 @@ export async function fetchAllPredictions(opts: { force?: boolean } = {}): Promi
       const sid      = canonicalKey(e.studentId || e.studentEmail || e._eid);
       const name     = e.studentName || e.name || "Unknown";
       const grade    = e.grade || e.class || e.className || "—";
-      const branchId = (e.branchId || e.schoolId || "") as string;
-      const branch   = branchMap.get(branchId) || e.schoolName || "—";
+      /* branchId MUST be a real branch id (from schools/{uid}/branches) —
+         NOT the owner's schoolId. Previous code fell back to e.schoolId
+         which equals the owner's uid, silently writing a meaningless
+         "branchId" into prediction → parent_tokens snapshots, breaking
+         every cross_dashboard_linking_rule consumer downstream. Now: empty
+         string when truly unmapped, so consumers can detect-and-flag
+         instead of running queries against a bogus branch. The display
+         `branch` name still falls back to schoolName for the UI. */
+      const branchId = String(e.branchId || "");
+      const branch   = (branchId && branchMap.get(branchId)) || e.schoolName || "—";
 
       const scores  = scoreMap.get(sid) || [];
       const recentSlice      = scores.slice(0, 5);                       // newest first

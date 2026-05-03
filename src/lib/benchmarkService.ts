@@ -117,8 +117,21 @@ export async function fetchBenchmarkData(): Promise<BenchmarkData | null> {
       tier,
       totalSchools: allStats.length,
     };
-  } catch (err) {
-    console.error("[benchmarkService] error:", err);
+  } catch (err: any) {
+    /* `permission-denied` here is EXPECTED for non-platform-admin owners —
+       the schools collection rule allows `list` only to platform admins,
+       so a regular owner attempting the cross-tenant benchmark will hit
+       this branch every render. Downgrade to debug-level so the console
+       doesn't fill with red errors that look like real bugs. The caller
+       (BenchmarkCard) already handles a null return by hiding the card.
+       Architectural follow-up: move benchmark aggregation to a Cloud
+       Function that publishes anonymized stats to a public collection. */
+    const code = err?.code || "";
+    if (code === "permission-denied") {
+      console.debug("[benchmarkService] benchmark unavailable (non-admin owner) — hiding card");
+    } else {
+      console.error("[benchmarkService] error:", err);
+    }
     return null;
   }
 }
