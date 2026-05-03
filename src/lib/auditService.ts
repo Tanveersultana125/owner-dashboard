@@ -22,6 +22,7 @@ export type AuditAction =
   | "settings_saved"
   | "alert_resolved"
   | "alert_acknowledged"
+  | "alert_assigned"
   | "data_exported";
 
 // ── Entry shape ───────────────────────────────────────────────────────────────
@@ -46,6 +47,7 @@ export const ACTION_CONFIG: Record<AuditAction, { icon: string; label: string; c
   settings_saved:     { icon: "⚙️", label: "Settings Updated",     color: "bg-slate-50 text-slate-600 border-slate-100" },
   alert_resolved:     { icon: "✅", label: "Alert Resolved",       color: "bg-emerald-50 text-emerald-600 border-emerald-100" },
   alert_acknowledged: { icon: "👁️", label: "Alert Acknowledged",   color: "bg-blue-50 text-blue-600 border-blue-100" },
+  alert_assigned:     { icon: "👥", label: "Alert Assigned",       color: "bg-violet-50 text-violet-600 border-violet-100" },
   data_exported:      { icon: "📥", label: "Data Exported",        color: "bg-purple-50 text-purple-600 border-purple-100" },
 };
 

@@ -5,7 +5,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { db, auth } from "@/lib/firebase";
-import { collection, addDoc, getDocs, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, getDocs, getDoc, doc, setDoc, serverTimestamp } from "firebase/firestore";
 import {
   Brain, AlertTriangle, TrendingDown, TrendingUp, Users,
   Search, ChevronDown, ChevronUp, RefreshCw, Share2,
@@ -160,6 +160,33 @@ export default function AIPredictorPage() {
     [filtered, currentPage],
   );
 
+  /* School-contact lookup is per-link (not per-prediction-batch) so we
+     fetch on first use and cache for the SPA session. Contact = email +
+     phone + name from the owner's `schools/{uid}` doc, surfaced to
+     parents in the portal footer so they can reach out without needing
+     to dig through emails. */
+  const [schoolContact, setSchoolContact] = useState<{
+    name: string; email: string; phone: string;
+  } | null>(null);
+  const ensureSchoolContact = async () => {
+    if (schoolContact) return schoolContact;
+    const uid = auth.currentUser?.uid;
+    if (!uid) return { name: "", email: "", phone: "" };
+    try {
+      const snap = await getDoc(doc(db, "schools", uid));
+      const sd = snap.exists() ? snap.data() as any : {};
+      const contact = {
+        name:  sd.schoolName || sd.name  || "",
+        email: sd.email      || "",
+        phone: sd.phone      || sd.contactPhone || "",
+      };
+      setSchoolContact(contact);
+      return contact;
+    } catch {
+      return { name: "", email: "", phone: "" };
+    }
+  };
+
   const generateParentLink = async (p: StudentRiskPrediction) => {
     const uid = auth.currentUser?.uid;
     if (!uid) return;
@@ -167,32 +194,46 @@ export default function AIPredictorPage() {
       const token  = crypto.randomUUID();
       const expiry = new Date();
       expiry.setDate(expiry.getDate() + PARENT_LINK_EXPIRY_DAYS);
+      const contact = await ensureSchoolContact();
 
-      await addDoc(collection(db, "parent_tokens"), {
-        token,
+      /* Use the token AS the Firestore doc ID. Previous `addDoc` generated
+         a random docId and stored token as a field — but the parent_tokens
+         security rule allows `get` (point-lookup by docId) and DENIES
+         `list` (collection queries). The reader's `query + where token=X`
+         was a list operation, hence "Missing or insufficient permissions".
+         setDoc with token-as-docId aligns writer + reader + rules: token
+         IS both the credential AND the lookup key. UUID v4 entropy (122
+         bits) makes enumeration infeasible. */
+      await setDoc(doc(db, "parent_tokens", token), {
+        token,                    // kept as a field for legacy backfills
         studentId:   p.studentId,
         studentName: p.studentName,
         schoolId:    uid,
-        // branchId added so cross-dashboard reads (Parent portal + Owner
-        // alerts) can scope by branch without a second lookup. (See
-        // memory: cross_dashboard_linking_rule.) `branch` (the branch
-        // name) is preserved for backwards compat with existing portal
-        // code paths.
-        branchId:    (p as any).branchId || "",
+        // branchId added so cross-dashboard reads can scope by branch
+        // without a second lookup. (See cross_dashboard_linking_rule
+        // memory.) `branch` (the branch NAME) preserved for display.
+        branchId:    p.branchId,
         branch:      p.branch,
         grade:       p.grade,
         attendance:  p.attendance,
         avgScore:    p.avgScore,
-        recentScores: p.recentScores,
-        feeDefaulted: p.feeDefaulted,
-        failProbability: p.failProbability,
-        riskLevel:   p.riskLevel,
-        riskFactors: p.riskFactors,
-        recommendation: p.recommendation,
-        expiresAt:   expiry.toISOString(),
-        // expiresAtMs is the field a Firestore TTL policy can target — set
-        // up the policy in the Firebase console to auto-delete expired
-        // tokens. Without it, this collection grows unbounded.
+        recentScores:     p.recentScores,
+        recentScoreDates: p.recentScoreDates,
+        feeDefaulted:     p.feeDefaulted,
+        feePendingAmount: p.feePendingAmount,
+        failProbability:  p.failProbability,
+        riskLevel:        p.riskLevel,
+        riskFactors:      p.riskFactors,
+        recommendation:   p.recommendation,
+        // School contact for the portal footer — parents have one tap
+        // to reach the school instead of asking around.
+        schoolContact:    contact,
+        expiresAt:        expiry.toISOString(),
+        // expiresAtMs is the field a Firestore TTL policy can target.
+        // Setup: Firebase Console → Firestore → TTL → add policy on
+        // `parent_tokens` with field `expiresAtMs`. Without this policy
+        // the collection grows unbounded — every link generated is kept
+        // forever. Auto-delete via TTL keeps storage costs at ₹0 long-term.
         expiresAtMs: expiry.getTime(),
         createdAt:   serverTimestamp(),
       });

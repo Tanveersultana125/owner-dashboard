@@ -39,7 +39,13 @@ export type RiskLevel = "Safe" | "Watch" | "High" | "Critical";
 export interface StudentRiskPrediction {
   studentId: string;
   studentName: string;
-  branch: string;
+  branch: string;                // human-readable branch NAME (for display)
+  /* Canonical branchId — required for cross-dashboard linking (parent_tokens
+     write, alert→branch lookups, scoping in downstream consumers). Previously
+     missing from the type, so the AIPredictorPage writer was forced into an
+     `(p as any).branchId || ""` cast that always evaluated to empty string —
+     silently violating cross_dashboard_linking_rule. */
+  branchId: string;
   grade: string;
   failProbability: number;       // 0–100
   riskLevel: RiskLevel;
@@ -50,7 +56,18 @@ export interface StudentRiskPrediction {
   avgScore: number;
   scoreTrend: number;            // positive = improving, negative = declining
   recentScores: number[];        // last 3–5 test scores (newest first)
+  /* Dates parallel to recentScores — same indexing, same newest-first
+     ordering. ParentPortal uses these to label test bars with actual
+     dates instead of "#1 #2 #3" placeholders. Empty string when source
+     doc had no usable date field. */
+  recentScoreDates: string[];
   feeDefaulted: boolean;
+  /* Pending fee amount (₹) for the student. 0 when not defaulted. From
+     `fees` (per-student records) when present, falls back to
+     `fee_structure.studentRows.pending` matched by name. ParentPortal
+     surfaces this in the fee status banner so parents see WHAT they owe,
+     not just THAT they owe. */
+  feePendingAmount: number;
 }
 
 // ── Core scoring formula ──────────────────────────────────────────────────────
@@ -218,16 +235,60 @@ export async function fetchAllPredictions(opts: { force?: boolean } = {}): Promi
       console.warn(`[riskPredictor] ${label} fetch failed:`, err);
       return { docs: [] as any[] } as any;
     };
-    const [enrollSnap, scoresSnap, attSnap, feesSnap] = await Promise.all([
-      getDocs(query(collection(db, "enrollments"), where("schoolId", "==", uid))).catch(swallow("enrollments")),
-      getDocs(query(collection(db, "test_scores"), where("schoolId", "==", uid))).catch(swallow("test_scores")),
+    /* Score + fee data is split across two co-canonical collections per
+       owner_dashboard_alternate_data_sources memory rule. Schools that enter
+       scores via the Teacher EnterScores flow write to `test_scores`; schools
+       using the gradebook flow write to `gradebook_scores`. Same for `fees`
+       (manual entries) vs `fee_structure` (configured plans). Reading only one
+       silently drops ~40% of records — risk predictions then under-count
+       failing students AND under-count fee defaulters, which propagates to
+       the parent_tokens snapshot and shows parents an inaccurate report. */
+    const [enrollSnap, scoresSnap, gradebookSnap, attSnap, feesSnap, feeStructSnap] = await Promise.all([
+      getDocs(query(collection(db, "enrollments"),      where("schoolId", "==", uid))).catch(swallow("enrollments")),
+      getDocs(query(collection(db, "test_scores"),      where("schoolId", "==", uid))).catch(swallow("test_scores")),
+      getDocs(query(collection(db, "gradebook_scores"), where("schoolId", "==", uid))).catch(swallow("gradebook_scores")),
       getDocs(query(
         collection(db, "attendance"),
         where("schoolId", "==", uid),
         where("date", ">=", attCutoff),
       )).catch(swallow("attendance")),
-      getDocs(query(collection(db, "fees"),        where("schoolId", "==", uid))).catch(swallow("fees")),
+      getDocs(query(collection(db, "fees"),             where("schoolId", "==", uid))).catch(swallow("fees")),
+      getDocs(query(collection(db, "fee_structure"),    where("schoolId", "==", uid))).catch(swallow("fee_structure")),
     ]);
+
+    const tsFromEnrollment = (e: any): number => {
+      const v = e?.createdAt;
+      if (!v) return 0;
+      if (typeof v.toMillis === "function") return v.toMillis();
+      if (typeof v.seconds === "number")    return v.seconds * 1000;
+      return 0;
+    };
+
+    /* ── Identity alias map ──────────────────────────────────────────────
+       Per dual_query_pattern_studentid_email memory: schools mix studentId
+       and studentEmail across collections. An enrollment with studentId
+       "abc" and a test_score doc with only studentEmail for the same
+       student would NOT join under naive `data.studentId || data.studentEmail`
+       keying — the student would appear as two separate predictions.
+
+       Pre-pass through enrollments (sorted oldest→newest, so newer wins
+       when there's a conflict) to build a (studentId | studentEmail | docId)
+       → canonical map. canonical = whichever id form the most-recent
+       enrollment carries. Downstream score / attendance / fee lookups
+       then route any key-form to the canonical key.
+       ──────────────────────────────────────────────────────────────────── */
+    const sortedEnrollDocs = [...enrollSnap.docs].sort(
+      (a: any, b: any) => tsFromEnrollment(a.data()) - tsFromEnrollment(b.data())
+    );
+    const aliasToCanonical = new Map<string, string>();
+    sortedEnrollDocs.forEach((d: any) => {
+      const data = d.data() as any;
+      const canonical = data.studentId || data.studentEmail || d.id;
+      if (data.studentId)    aliasToCanonical.set(data.studentId,    canonical);
+      if (data.studentEmail) aliasToCanonical.set(data.studentEmail, canonical);
+      aliasToCanonical.set(d.id, canonical);
+    });
+    const canonicalKey = (k: string): string => aliasToCanonical.get(k) || k;
 
     // Enrollment-row dedup BEFORE predictions: one prediction per unique
     // student. A student in 3 classes used to produce 3 predictions which
@@ -237,17 +298,12 @@ export async function fetchAllPredictions(opts: { force?: boolean } = {}): Promi
     // Now the canonical row is the most-recent enrollment, giving a stable
     // "current branch" for the prediction. (See memory:
     // bug_pattern_enrollment_row_dedup.)
-    const tsFromEnrollment = (e: any): number => {
-      const v = e?.createdAt;
-      if (!v) return 0;
-      if (typeof v.toMillis === "function") return v.toMillis();
-      if (typeof v.seconds === "number")    return v.seconds * 1000;
-      return 0;
-    };
     const enrollmentByStudent = new Map<string, any>();
     enrollSnap.docs.forEach((d: any) => {
       const data = { _eid: d.id, ...d.data() as any };
-      const sid = data.studentId || data.studentEmail || data._eid;
+      // Route through canonicalKey so two enrollments for the same student
+      // keyed by different id-forms (one studentId, one studentEmail) collapse.
+      const sid = canonicalKey(data.studentId || data.studentEmail || data._eid);
       const ts = tsFromEnrollment(data);
       const existing = enrollmentByStudent.get(sid);
       if (!existing || ts > tsFromEnrollment(existing)) {
@@ -268,14 +324,43 @@ export async function fetchAllPredictions(opts: { force?: boolean } = {}): Promi
       return tryStamp(data?.createdAt) || tryStamp(data?.timestamp);
     };
 
-    const scoreMap = new Map<string, { score: number; ts: number }[]>();
-    scoresSnap.docs.forEach((d: any) => {
-      const data = d.data() as any;
-      const sid  = data.studentId || data.studentEmail || "";
-      const pct  = parseFloat(data.percentage ?? data.score ?? "");
-      if (!sid || isNaN(pct)) return;
-      if (!scoreMap.has(sid)) scoreMap.set(sid, []);
-      scoreMap.get(sid)!.push({ score: pct, ts: tsOf(data) });
+    /* Score map fed by BOTH test_scores AND gradebook_scores per
+       owner_dashboard_alternate_data_sources memory rule. Each source
+       contributes ~50% of records depending on which entry flow the
+       school uses (Teacher EnterScores vs Gradebook). canonicalKey
+       routing means an email-keyed score still rolls up to the
+       studentId-keyed enrollment.
+
+       Each entry now also carries a human-readable date string so
+       ParentPortal can label test bars with actual dates. Date sources
+       per filterByTime field-drift memory: try date / dateStr / createdAt
+       / timestamp (different writers use different fields). Empty string
+       when none parse. */
+    const formatDate = (ms: number): string => {
+      if (!ms || !Number.isFinite(ms)) return "";
+      try {
+        return new Date(ms).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+      } catch { return ""; }
+    };
+    const dateOf = (data: any): string => {
+      // Try string-typed date fields first (writer's own date string is
+      // truthful — Firestore Timestamp may differ if backfilled later).
+      if (typeof data?.date === "string"   && data.date.trim())    return data.date;
+      if (typeof data?.dateStr === "string" && data.dateStr.trim()) return data.dateStr;
+      const ms = tsOf(data);
+      return formatDate(ms);
+    };
+    const scoreMap = new Map<string, { score: number; ts: number; dateStr: string }[]>();
+    [scoresSnap, gradebookSnap].forEach(snap => {
+      snap.docs.forEach((d: any) => {
+        const data = d.data() as any;
+        const rawSid = data.studentId || data.studentEmail || "";
+        const sid  = canonicalKey(rawSid);
+        const pct  = parseFloat(data.percentage ?? data.score ?? "");
+        if (!sid || isNaN(pct)) return;
+        if (!scoreMap.has(sid)) scoreMap.set(sid, []);
+        scoreMap.get(sid)!.push({ score: pct, ts: tsOf(data), dateStr: dateOf(data) });
+      });
     });
     // Sort each student's scores newest-first (in-memory, no field-name
     // dependency at query level).
@@ -284,7 +369,7 @@ export async function fetchAllPredictions(opts: { force?: boolean } = {}): Promi
     const attMap = new Map<string, { p: number; t: number }>();
     attSnap.docs.forEach((d: any) => {
       const data = d.data() as any;
-      const sid  = data.studentId || data.studentEmail || "";
+      const sid  = canonicalKey(data.studentId || data.studentEmail || "");
       if (!sid) return;
       if (!attMap.has(sid)) attMap.set(sid, { p: 0, t: 0 });
       const cur = attMap.get(sid)!;
@@ -292,26 +377,62 @@ export async function fetchAllPredictions(opts: { force?: boolean } = {}): Promi
       if ((data.status || "").toLowerCase() === "present") cur.p++;
     });
 
-    const feeMap = new Map<string, boolean>(); // true = has defaulted/pending fee
+    /* Fee defaulter detection from BOTH sources, accumulating PENDING
+       AMOUNT (not just a boolean) so ParentPortal can show parents the
+       actual ₹ owed instead of just "Fee Pending":
+         (a) `fees` collection — per-student records with proper
+             studentId/studentEmail. canonicalKey routes them to the
+             enrollment's canonical key. Authoritative when present.
+             Amount = balance ?? amount-paidAmount, summed across pending
+             docs (multi-term fees).
+         (b) `fee_structure.studentRows` — per-class Excel uploads where
+             rows DON'T carry studentId/studentEmail (Excel doesn't have
+             those columns). Best-effort name-match: build a Map of
+             lowercase-trimmed student names → pending amount, then check
+             at prediction time. Multiple rows per name (rare) accumulate.
+             False positives bounded by 10%-weight signal; net better than
+             ignoring 40% of fee data. */
+    const feeMap = new Map<string, number>(); // pending amount in ₹ (0 = none)
     feesSnap.docs.forEach((d: any) => {
       const data = d.data() as any;
-      const sid  = data.studentId || data.studentEmail || "";
+      const sid  = canonicalKey(data.studentId || data.studentEmail || "");
       if (!sid) return;
       const isPending = (data.status || "").toLowerCase() !== "paid";
-      if (isPending) feeMap.set(sid, true);
+      if (!isPending) return;
+      const amount = Number(data.balance ?? data.dueAmount ?? data.amount ?? 0);
+      const paid   = Number(data.paidAmount ?? 0);
+      const pending = Math.max(0, amount - paid);
+      if (pending > 0) feeMap.set(sid, (feeMap.get(sid) || 0) + pending);
+    });
+    const structuralPendingAmounts = new Map<string, number>();
+    feeStructSnap.docs.forEach((d: any) => {
+      const rows = (d.data()?.studentRows || []) as any[];
+      rows.forEach(st => {
+        const pending = Number(st?.pending) || 0;
+        const name = String(st?.studentName || "").toLowerCase().trim();
+        if (pending > 0 && name) {
+          structuralPendingAmounts.set(name, (structuralPendingAmounts.get(name) || 0) + pending);
+        }
+      });
     });
 
     // 6. compute predictions
     const predictions: StudentRiskPrediction[] = [];
 
     enrollments.forEach(e => {
-      const sid    = e.studentId || e.studentEmail || e._eid;
-      const name   = e.studentName || e.name || "Unknown";
-      const grade  = e.grade || e.class || e.className || "—";
-      const branch = branchMap.get(e.branchId || e.schoolId || "") || e.schoolName || "—";
+      // Canonicalize the join key once — same routing the score/att/fee
+      // maps used. Without canonicalKey here, an enrollment keyed by
+      // studentId would miss scores keyed by studentEmail (or vice versa).
+      const sid      = canonicalKey(e.studentId || e.studentEmail || e._eid);
+      const name     = e.studentName || e.name || "Unknown";
+      const grade    = e.grade || e.class || e.className || "—";
+      const branchId = (e.branchId || e.schoolId || "") as string;
+      const branch   = branchMap.get(branchId) || e.schoolName || "—";
 
       const scores  = scoreMap.get(sid) || [];
-      const recentScores = scores.slice(0, 5).map(s => s.score);   // newest first
+      const recentSlice      = scores.slice(0, 5);                       // newest first
+      const recentScores     = recentSlice.map(s => s.score);
+      const recentScoreDates = recentSlice.map(s => s.dateStr);
       const avgScore = recentScores.length
         ? Math.round(recentScores.reduce((a, b) => a + b, 0) / recentScores.length)
         : 0;
@@ -324,7 +445,17 @@ export async function fetchAllPredictions(opts: { force?: boolean } = {}): Promi
       const att    = attMap.get(sid);
       const attendance = att && att.t > 0 ? Math.round((att.p / att.t) * 100) : 0;
 
-      const feeDefaulted = feeMap.has(sid);
+      /* Pending amount from EITHER source. fees collection (per-student,
+         ID-keyed) is authoritative when present; fee_structure (Excel
+         uploads, name-only) is the best-effort fallback. We sum the
+         larger of the two — a school using both flows for the same
+         student is rare, but if it happens we trust the explicit fees
+         entry over the bulk Excel row (Math.max not sum, to avoid
+         double-counting). */
+      const feesAmount       = feeMap.get(sid) || 0;
+      const structuralAmount = structuralPendingAmounts.get(name.toLowerCase().trim()) || 0;
+      const feePendingAmount = Math.max(feesAmount, structuralAmount);
+      const feeDefaulted     = feePendingAmount > 0;
 
       // Data-presence flags drive the weighted-renorm formula AND the
       // factor-list gating below. Without these, score=0 (no data) leaks
@@ -353,6 +484,7 @@ export async function fetchAllPredictions(opts: { force?: boolean } = {}): Promi
         studentId: sid,
         studentName: name,
         branch,
+        branchId,
         grade,
         failProbability,
         riskLevel,
@@ -362,7 +494,9 @@ export async function fetchAllPredictions(opts: { force?: boolean } = {}): Promi
         avgScore,
         scoreTrend,
         recentScores,
+        recentScoreDates,
         feeDefaulted,
+        feePendingAmount,
       });
     });
 

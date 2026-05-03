@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import {
   ArrowLeft, GraduationCap, Calendar, MapPin, CheckCircle2, Circle, Loader2,
-  ChevronRight, Clock, UserCheck, X,
+  ChevronRight, Clock, UserCheck, X, AlertTriangle,
 } from "lucide-react";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -17,11 +17,25 @@ import { tilt3D, tilt3DStyle } from "@/lib/use3DTilt";
 export default function AlertDetailPage() {
   const { id }     = useParams<{ id: string }>();
   const navigate   = useNavigate();
+  const location   = useLocation();
+  /* Smart back: if user landed on this page directly (notification deep-link,
+     bookmark, refresh) location.key is "default" and navigate(-1) would leave
+     the SPA — fall back to /risks. If they came in via in-app navigation,
+     location.key is unique and navigate(-1) preserves their breadcrumb. */
+  const goBack = () => {
+    if (location.key !== 'default') navigate(-1);
+    else navigate('/risks');
+  };
   const [data, setData]           = useState<AlertDetailData | null>(null);
   const [loading, setLoading]     = useState(true);
   const [acting, setActing]       = useState<string | null>(null);
   const [showAssign, setShowAssign] = useState(false);
   const [assigneeName, setAssigneeName] = useState("");
+  /* Local UI feedback for acknowledge/assign actions. Resolve navigates away
+     so doesn't need this. Without it, the toast confirms success but the page
+     header still says "Critical" with no trace of what just happened — user
+     wonders if the click registered. */
+  const [actedState, setActedState] = useState<{ action: 'acknowledged' | 'assigned'; assignee?: string } | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -46,7 +60,11 @@ export default function AlertDetailPage() {
         data?.branchName,
       );
       toast.success(`Alert ${label} successfully.`);
-      if (action === "resolved") navigate("/risks");
+      if (action === "resolved") {
+        navigate("/risks");
+      } else if (action === "acknowledged") {
+        setActedState({ action: 'acknowledged' });
+      }
     } catch {
       toast.error("Action failed. Please try again.");
     } finally {
@@ -61,6 +79,7 @@ export default function AlertDetailPage() {
       await resolveAlert(id, "assigned", assigneeName.trim());
       addAuditLog("alert_assigned", `Alert assigned to ${assigneeName.trim()}: ${data?.title || id}`, data?.branchName);
       toast.success(`Alert assigned to ${assigneeName.trim()}.`);
+      setActedState({ action: 'assigned', assignee: assigneeName.trim() });
       setShowAssign(false);
       setAssigneeName("");
     } catch {
@@ -115,8 +134,9 @@ export default function AlertDetailPage() {
           {/* Back + icon + title */}
           <div className="flex items-start gap-6">
             <button
-              onClick={() => navigate("/risks")}
+              onClick={goBack}
               className="mt-1 p-2 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors shrink-0"
+              aria-label="Back"
             >
               <ArrowLeft className="w-5 h-5 text-slate-500" />
             </button>
@@ -135,6 +155,13 @@ export default function AlertDetailPage() {
                 >
                   {data.status}
                 </span>
+                {actedState && (
+                  <span className="px-3 py-1 rounded-md text-[9px] font-black uppercase tracking-widest bg-emerald-500 text-white">
+                    {actedState.action === 'acknowledged'
+                      ? '✓ Acknowledged'
+                      : `Assigned: ${actedState.assignee}`}
+                  </span>
+                )}
                 <div className="px-3 py-1 rounded-md border border-slate-100 bg-slate-50 text-slate-400 text-[9px] font-bold">
                   Alert #{data.alertNum}
                 </div>
@@ -179,6 +206,29 @@ export default function AlertDetailPage() {
         </div>
       </div>
 
+      {/* ── Mapping issue banner ─────────────────────────────────────────────
+          Surfaced when overview generated this alert (so the branch DOES have
+          risk) but our resolution chain found zero students attributable to
+          the branch. Without the banner the user sees an honest-but-confusing
+          empty page and assumes the branch is healthy. */}
+      {data.mappingIssue && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 sm:p-5 flex items-start gap-3">
+          <div className="shrink-0 w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center">
+            <AlertTriangle className="w-4 h-4 text-amber-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-amber-900 mb-1">Student-branch mapping issue</p>
+            <p className="text-xs text-amber-700 leading-relaxed">
+              The overview reports risk in <span className="font-semibold">{data.branchName}</span>,
+              but no students from your <span className="font-semibold">{data.mappingIssue.totalSchoolStudents}</span> total
+              could be resolved to this branch. Counts on this page may be incomplete — check that
+              your students have a <code className="px-1 py-0.5 rounded bg-amber-100 text-amber-800 font-mono text-[10px]">branchId</code> field
+              matching this branch's ID.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* ── Metrics Row ──────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {data.metrics.map((m, i) => (
@@ -199,9 +249,9 @@ export default function AlertDetailPage() {
 
       {/* ── Chart + Affected Students ─────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Attendance Trend */}
+        {/* Trend (attendance daily / academic weekly — driven by data.kind) */}
         <div {...tilt3D} style={tilt3DStyle} className="lg:col-span-7 bg-white p-5 sm:p-8 rounded-[1.5rem] border border-slate-100">
-          <h4 className="text-base font-bold text-[#1e294b] mb-8">Attendance Trend (Last 7 Days)</h4>
+          <h4 className="text-base font-bold text-[#1e294b] mb-8">{data.trendLabel}</h4>
           {hasTrendData ? (
             <div className="h-[250px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -209,13 +259,17 @@ export default function AlertDetailPage() {
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                   <XAxis dataKey="day" axisLine={false} tickLine={false}
                     tick={{ fill: "#94a3b8", fontSize: 10, fontWeight: "bold" }} dy={10} />
-                  <YAxis domain={[50, 100]} axisLine={false} tickLine={false}
+                  {/* Academic scores can dip below 50 — full [0,100] axis. Attendance
+                      stays in the [50,100] band so a tighter axis reads better there. */}
+                  <YAxis
+                    domain={data.kind === 'academic' ? [0, 100] : [50, 100]}
+                    axisLine={false} tickLine={false}
                     tick={{ fill: "#94a3b8", fontSize: 10, fontWeight: "bold" }}
-                    ticks={[50, 60, 70, 80, 90, 100]} />
+                    ticks={data.kind === 'academic' ? [0, 25, 50, 75, 100] : [50, 60, 70, 80, 90, 100]} />
                   <Tooltip contentStyle={{ borderRadius: "12px", border: "none", boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)" }} />
                   <ReferenceLine y={data.baseline} stroke="#10b981" strokeDasharray="5 5"
-                    label={{ value: "Baseline", position: "right", fill: "#10b981", fontSize: 10, fontWeight: "bold" }} />
-                  <Line type="monotone" dataKey="pct" name="Attendance %"
+                    label={{ value: data.baselineLabel, position: "right", fill: "#10b981", fontSize: 10, fontWeight: "bold" }} />
+                  <Line type="monotone" dataKey="pct" name={data.kind === 'academic' ? "Avg Score %" : "Attendance %"}
                     stroke={accentColor} strokeWidth={3}
                     dot={{ r: 4, fill: accentColor, strokeWidth: 1.5, stroke: "#fff" }} />
                 </LineChart>
@@ -223,8 +277,14 @@ export default function AlertDetailPage() {
             </div>
           ) : (
             <div className="h-[250px] flex flex-col items-center justify-center border border-dashed border-slate-200 rounded-xl gap-2">
-              <p className="text-sm text-slate-400 font-semibold">No daily attendance data found</p>
-              <p className="text-xs text-slate-300">Trend appears once attendance is recorded per day</p>
+              <p className="text-sm text-slate-400 font-semibold">
+                {data.kind === 'academic' ? "No recent test-score data found" : "No daily attendance data found"}
+              </p>
+              <p className="text-xs text-slate-300">
+                {data.kind === 'academic'
+                  ? "Trend appears once tests are recorded over the last 4 weeks"
+                  : "Trend appears once attendance is recorded per day"}
+              </p>
             </div>
           )}
         </div>
@@ -234,7 +294,7 @@ export default function AlertDetailPage() {
           <h4 className="text-base font-bold text-[#1e294b] mb-6">
             Affected Students
             {data.affectedStudents.length > 0 && (
-              <span className="ml-2 text-xs font-bold text-slate-400">(below 80% attendance)</span>
+              <span className="ml-2 text-xs font-bold text-slate-400">{data.affectedSubtitle}</span>
             )}
           </h4>
           {data.affectedStudents.length === 0 ? (
@@ -304,7 +364,9 @@ export default function AlertDetailPage() {
                 <div key={i} className="flex items-start justify-between p-4 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors border border-slate-100">
                   <div>
                     <p className="text-sm font-semibold text-[#1e294b] mb-1">{h.title}</p>
-                    <p className="text-xs text-slate-400">{h.period} • {h.branch} • {h.resolvedIn}</p>
+                    <p className="text-xs text-slate-400">
+                      {[h.period, h.branch, h.resolvedIn].filter(Boolean).join(" • ")}
+                    </p>
                   </div>
                   <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-100 text-emerald-600 shrink-0 ml-3">
                     {h.status}

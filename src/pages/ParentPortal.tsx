@@ -13,20 +13,24 @@
  * Indian market note: Parents can't use dashboards. This is a
  * simple, mobile-first, no-login link they can open on WhatsApp.
  */
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { db } from "@/lib/firebase";
-import {
-  collection, query, where, getDocs, limit,
-} from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import {
   GraduationCap, TrendingUp, TrendingDown, AlertTriangle,
-  CheckCircle2, Clock, IndianRupee, BookOpen, Activity,
-  ShieldAlert, Eye, Loader2, Minus,
+  CheckCircle2, IndianRupee, BookOpen, Activity,
+  ShieldAlert, Eye, Mail, Phone, RefreshCw,
 } from "lucide-react";
 import { tilt3D, tilt3DStyle } from "@/lib/use3DTilt";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
+interface SchoolContact {
+  name:  string;
+  email: string;
+  phone: string;
+}
+
 interface PortalData {
   studentName: string;
   branch: string;
@@ -34,12 +38,37 @@ interface PortalData {
   attendance: number;
   avgScore: number;
   recentScores: number[];
+  /* Parallel to recentScores — same indexing, same newest-first ordering.
+     CONTRACT WITH WRITER (riskPredictorService.scoreMap, sorted by ts desc):
+       recentScores[0]      = newest score
+       recentScores[length-1] = oldest score
+       recentScoreDates[i]  = date for recentScores[i]
+     If the writer ever changes ordering, the trend display + bar order
+     here will silently flip. Keep this comment in sync with the writer. */
+  recentScoreDates: string[];
   feeDefaulted: boolean;
+  feePendingAmount: number;
   failProbability: number;
   riskLevel: "Safe" | "Watch" | "High" | "Critical";
   riskFactors: string[];
   recommendation: string;
+  schoolContact: SchoolContact;
   expiresAt: string;
+}
+
+// ── Recommendation fallback per tier — used when writer returns empty ─────
+const FALLBACK_RECOMMENDATION: Record<PortalData["riskLevel"], string> = {
+  Critical: "Please reach out to the school as soon as possible to discuss support options.",
+  High:     "We recommend a meeting with your child's teacher within the next week.",
+  Watch:    "Monitor your child's progress closely; small interventions now prevent bigger issues later.",
+  Safe:     "Your child is doing well. Keep encouraging consistent study and attendance.",
+};
+
+// ── Format ₹ amount (compact for >1000) ──────────────────────────────────
+function formatRupees(n: number): string {
+  if (n >= 100000) return `₹${(n / 100000).toFixed(1)} L`;
+  if (n >= 1000)   return `₹${(n / 1000).toFixed(1)}k`;
+  return `₹${Math.round(n)}`;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -64,13 +93,17 @@ function getScoreColor(v: number) {
   return "#ef4444";
 }
 
-// Circular progress SVG
-function CircleProgress({ value, color, size = 88 }: { value: number; color: string; size?: number }) {
+// Circular progress SVG (with screen-reader label)
+function CircleProgress({ value, color, label, size = 88 }: { value: number; color: string; label: string; size?: number }) {
   const r = (size - 12) / 2;
   const circ = 2 * Math.PI * r;
   const offset = circ - (value / 100) * circ;
   return (
-    <svg width={size} height={size}>
+    <svg
+      width={size} height={size}
+      role="img"
+      aria-label={`${label}: ${value} percent`}
+    >
       <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#e2e8f0" strokeWidth={6} />
       <circle
         cx={size/2} cy={size/2} r={r} fill="none"
@@ -95,46 +128,80 @@ export default function ParentPortal() {
   const [data,    setData]    = useState<PortalData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState("");
+  // Bumped on retry click — useEffect dep refetches without reloading the SPA
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  /* Defensive scalar coercers — Firestore is schemaless, an old token
+     written before a schema change might have arrays-as-objects or
+     numbers-as-strings. Without these the UI would throw at render
+     time and dump a raw stack trace into the error card. */
+  const asArray = useCallback(<T,>(v: unknown, fallback: T[]): T[] =>
+    Array.isArray(v) ? v as T[] : fallback, []);
+  const asNumber = useCallback((v: unknown, fallback: number): number => {
+    const n = typeof v === "number" ? v : Number(v);
+    return Number.isFinite(n) ? n : fallback;
+  }, []);
 
   useEffect(() => {
     if (!token) { setError("Invalid link — no token provided."); setLoading(false); return; }
+    let cancelled = false;
     const load = async () => {
+      setLoading(true); setError("");
       try {
-        // Query by token field
-        const snap = await getDocs(
-          query(collection(db, "parent_tokens"), where("token", "==", token), limit(1))
-        );
-        if (snap.empty) { setError("Link not found or has been revoked."); setLoading(false); return; }
+        /* Token IS the doc id (writer uses setDoc with token as path).
+           Single point-lookup via getDoc → matches the parent_tokens rule's
+           `allow get: if true` (list is denied). The previous query+where
+           was a list operation, hence "Missing or insufficient permissions". */
+        const snap = await getDoc(doc(db, "parent_tokens", token));
+        if (cancelled) return;
+        if (!snap.exists()) { setError("Link not found or has been revoked."); setLoading(false); return; }
 
-        const doc  = snap.docs[0].data() as any;
+        const docData = snap.data() as any;
 
-        // Check expiry
-        if (doc.expiresAt && new Date(doc.expiresAt) < new Date()) {
+        /* Expiry check — DEFENSIVE.
+           Previous `if (doc.expiresAt && ...)` short-circuited when
+           expiresAt was missing, letting tokens with no expiry live
+           forever (legacy / partial writes). Now: missing OR malformed
+           expiresAt → reject. Only a parseable expiresAt that's in the
+           future passes through. */
+        const expiryMs = docData.expiresAt ? Date.parse(docData.expiresAt) : NaN;
+        if (!Number.isFinite(expiryMs)) {
+          setError("This link is invalid (no expiry set). Please ask the school for a new link.");
+          setLoading(false); return;
+        }
+        if (expiryMs < Date.now()) {
           setError("This link has expired. Please ask the school for a new link.");
           setLoading(false); return;
         }
 
+        const sc = (docData.schoolContact || {}) as Partial<SchoolContact>;
         setData({
-          studentName:     doc.studentName || "Your Child",
-          branch:          doc.branch      || "—",
-          grade:           doc.grade       || "—",
-          attendance:      doc.attendance  ?? 0,
-          avgScore:        doc.avgScore    ?? 0,
-          recentScores:    doc.recentScores ?? [],
-          feeDefaulted:    doc.feeDefaulted ?? false,
-          failProbability: doc.failProbability ?? 0,
-          riskLevel:       doc.riskLevel  || "Watch",
-          riskFactors:     doc.riskFactors || [],
-          recommendation:  doc.recommendation || "",
-          expiresAt:       doc.expiresAt  || "",
+          studentName:      docData.studentName || "Your Child",
+          branch:           docData.branch      || "—",
+          grade:            docData.grade       || "—",
+          attendance:       asNumber(docData.attendance, 0),
+          avgScore:         asNumber(docData.avgScore, 0),
+          recentScores:     asArray<number>(docData.recentScores, []),
+          recentScoreDates: asArray<string>(docData.recentScoreDates, []),
+          feeDefaulted:     !!docData.feeDefaulted,
+          feePendingAmount: asNumber(docData.feePendingAmount, 0),
+          failProbability:  asNumber(docData.failProbability, 0),
+          riskLevel:        docData.riskLevel  || "Watch",
+          riskFactors:      asArray<string>(docData.riskFactors, []),
+          recommendation:   docData.recommendation || "",
+          schoolContact:    { name: sc.name || "", email: sc.email || "", phone: sc.phone || "" },
+          expiresAt:        docData.expiresAt  || "",
         });
       } catch (e: any) {
-        setError("Failed to load: " + e.message);
+        if (!cancelled) setError("Failed to load: " + (e?.message || "Unknown error"));
       }
-      setLoading(false);
+      if (!cancelled) setLoading(false);
     };
     load();
-  }, [token]);
+    return () => { cancelled = true; };
+  }, [token, refreshKey, asArray, asNumber]);
+
+  const handleRetry = () => setRefreshKey(k => k + 1);
 
   // ── Loading ───────────────────────────────────────────────────────────────
   if (loading) {
@@ -150,6 +217,11 @@ export default function ParentPortal() {
 
   // ── Error ─────────────────────────────────────────────────────────────────
   if (error || !data) {
+    /* Network errors get a Retry; permission / not-found / expired errors
+       get a fallback message — retrying those wouldn't help and would
+       just feel broken. Heuristic: if the message starts with "Failed to
+       load" (catch-block path), treat as network-class and offer retry. */
+    const isRetryable = error.startsWith("Failed to load");
     return (
       <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center px-4">
         <div className="bg-white rounded-[2rem] shadow-xl p-8 max-w-sm w-full text-center space-y-4">
@@ -158,7 +230,17 @@ export default function ParentPortal() {
           </div>
           <h2 className="text-lg font-black text-[#1e294b]">Link Error</h2>
           <p className="text-sm text-slate-500">{error || "Unknown error"}</p>
-          <p className="text-xs text-slate-400">Please contact your school for a fresh report link.</p>
+          {isRetryable ? (
+            <button
+              onClick={handleRetry}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#1e3a8a] text-white text-sm font-bold hover:bg-blue-900 transition-colors"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Try Again
+            </button>
+          ) : (
+            <p className="text-xs text-slate-400">Please contact your school for a fresh report link.</p>
+          )}
         </div>
       </div>
     );
@@ -166,9 +248,26 @@ export default function ParentPortal() {
 
   const risk = getRiskDisplay(data.riskLevel);
   const RiskIcon = risk.icon;
+  // Recommendation falls back to tier-default when writer returned empty
+  const recommendation = data.recommendation || FALLBACK_RECOMMENDATION[data.riskLevel];
 
   return (
-    <div className="min-h-screen bg-[#f8fafc]">
+    <div className="min-h-screen bg-[#f8fafc] parent-portal-root">
+      {/* Print-friendly CSS — parents may want to share/save the report.
+          Strips 3D transforms (which break paginated print) and shadows,
+          forces backgrounds for readability, hides interactive-only chrome. */}
+      <style>{`
+        @media print {
+          .parent-portal-root, .parent-portal-root * {
+            transform: none !important;
+            box-shadow: none !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+          .no-print { display: none !important; }
+          .parent-portal-root { background: #fff !important; }
+        }
+      `}</style>
       {/* ── Header ──────────────────────────────────────────────────────── */}
       <div className="bg-gradient-to-r from-[#1e3a8a] to-[#2563eb] text-white px-6 pt-10 pb-8">
         <p className="text-xs font-black uppercase tracking-[0.2em] text-blue-200 mb-3">Edullent</p>
@@ -187,7 +286,7 @@ export default function ParentPortal() {
           <RiskIcon className={`w-5 h-5 ${risk.color} shrink-0 mt-0.5`} />
           <div>
             <p className={`font-black text-sm ${risk.color}`}>{risk.label}</p>
-            <p className="text-xs text-slate-600 mt-0.5">{data.recommendation}</p>
+            <p className="text-xs text-slate-600 mt-0.5">{recommendation}</p>
           </div>
         </div>
 
@@ -195,7 +294,7 @@ export default function ParentPortal() {
         <div className="grid grid-cols-2 gap-3">
           {/* Attendance */}
           <div {...tilt3D} style={tilt3DStyle} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex flex-col items-center gap-2">
-            <CircleProgress value={data.attendance} color={getAttColor(data.attendance)} />
+            <CircleProgress value={data.attendance} color={getAttColor(data.attendance)} label="Attendance" />
             <p className="text-xs font-black text-slate-500 uppercase tracking-wider">Attendance</p>
             {data.attendance < 75 && (
               <p className="text-[10px] text-red-500 font-bold text-center">Below 75% minimum</p>
@@ -204,7 +303,7 @@ export default function ParentPortal() {
 
           {/* Average Score */}
           <div {...tilt3D} style={tilt3DStyle} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex flex-col items-center gap-2">
-            <CircleProgress value={data.avgScore} color={getScoreColor(data.avgScore)} />
+            <CircleProgress value={data.avgScore} color={getScoreColor(data.avgScore)} label="Average Score" />
             <p className="text-xs font-black text-slate-500 uppercase tracking-wider">Avg Score</p>
             {data.avgScore < 50 && (
               <p className="text-[10px] text-red-500 font-bold text-center">Below passing mark</p>
@@ -220,21 +319,33 @@ export default function ParentPortal() {
               Recent Test Scores
             </p>
             <div className="flex items-end gap-3">
-              {[...data.recentScores].reverse().map((s, i) => {
+              {/* Source array is newest-first (writer contract — see PortalData
+                  comment). Reverse for display so chart reads left-to-right
+                  oldest → newest, which matches how parents naturally scan
+                  test results chronologically. The dates array is reversed
+                  in lockstep so each bar's date label stays correct. */}
+              {(() => {
+                const scoresOldFirst = [...data.recentScores].reverse();
+                const datesOldFirst  = [...data.recentScoreDates].reverse();
                 const maxH = 56;
-                const barH = Math.max(8, Math.round((s / 100) * maxH));
-                const col  = s >= 75 ? "#10b981" : s >= 50 ? "#f59e0b" : "#ef4444";
-                return (
-                  <div key={i} className="flex flex-col items-center gap-1 flex-1">
-                    <span className="text-[10px] font-black" style={{ color: col }}>{s}%</span>
-                    <div
-                      className="w-full rounded-t-lg transition-all"
-                      style={{ height: barH, backgroundColor: col, opacity: 0.85 }}
-                    />
-                    <span className="text-[9px] text-slate-400">#{i + 1}</span>
-                  </div>
-                );
-              })}
+                return scoresOldFirst.map((s, i) => {
+                  const barH = Math.max(8, Math.round((s / 100) * maxH));
+                  const col  = s >= 75 ? "#10b981" : s >= 50 ? "#f59e0b" : "#ef4444";
+                  // Use date when available, fall back to "Test #" so bars
+                  // never render label-less (legacy snapshots have no dates).
+                  const dateLabel = datesOldFirst[i] || `Test ${i + 1}`;
+                  return (
+                    <div key={i} className="flex flex-col items-center gap-1 flex-1">
+                      <span className="text-[10px] font-black" style={{ color: col }}>{s}%</span>
+                      <div
+                        className="w-full rounded-t-lg transition-all"
+                        style={{ height: barH, backgroundColor: col, opacity: 0.85 }}
+                      />
+                      <span className="text-[9px] text-slate-400 truncate max-w-full" title={dateLabel}>{dateLabel}</span>
+                    </div>
+                  );
+                });
+              })()}
             </div>
             {/* Trend indicator */}
             {data.recentScores.length >= 2 && (() => {
@@ -262,10 +373,21 @@ export default function ParentPortal() {
             : "bg-emerald-50 border-emerald-200"
         }`}>
           <IndianRupee className={`w-5 h-5 shrink-0 ${data.feeDefaulted ? "text-amber-600" : "text-emerald-600"}`} />
-          <div>
-            <p className={`text-sm font-black ${data.feeDefaulted ? "text-amber-700" : "text-emerald-700"}`}>
-              {data.feeDefaulted ? "Fee Payment Pending" : "Fees Paid — Thank You!"}
-            </p>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-baseline gap-2 flex-wrap">
+              <p className={`text-sm font-black ${data.feeDefaulted ? "text-amber-700" : "text-emerald-700"}`}>
+                {data.feeDefaulted ? "Fee Payment Pending" : "Fees Paid — Thank You!"}
+              </p>
+              {/* Surface the actual ₹ owed when known — parents asked about
+                  this repeatedly. Hide when amount is 0 (legacy snapshots
+                  before feePendingAmount was added) so we never show "₹0
+                  pending" which would be confusing. */}
+              {data.feeDefaulted && data.feePendingAmount > 0 && (
+                <span className="text-sm font-black text-amber-800">
+                  · {formatRupees(data.feePendingAmount)}
+                </span>
+              )}
+            </div>
             {data.feeDefaulted && (
               <p className="text-xs text-amber-600 mt-0.5">Please contact the school office for fee payment.</p>
             )}
@@ -289,6 +411,44 @@ export default function ParentPortal() {
             </ul>
           </div>
         )}
+
+        {/* ── School contact card ──────────────────────────────────────
+            One-tap reach to the school. Hidden entirely when school
+            published no contact (older snapshots, or owner left fields
+            blank) — better than rendering an empty section. */}
+        {(data.schoolContact.email || data.schoolContact.phone) && (
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+            <p className="text-xs font-black text-slate-500 uppercase tracking-widest mb-3">Questions? Contact School</p>
+            <div className="flex flex-col gap-2">
+              {data.schoolContact.phone && (
+                <a
+                  href={`tel:${data.schoolContact.phone}`}
+                  className="flex items-center gap-2.5 text-sm font-bold text-[#1e3a8a] hover:underline"
+                >
+                  <Phone className="w-4 h-4 shrink-0" />
+                  {data.schoolContact.phone}
+                </a>
+              )}
+              {data.schoolContact.email && (
+                <a
+                  href={`mailto:${data.schoolContact.email}`}
+                  className="flex items-center gap-2.5 text-sm font-bold text-[#1e3a8a] hover:underline break-all"
+                >
+                  <Mail className="w-4 h-4 shrink-0" />
+                  {data.schoolContact.email}
+                </a>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── Print button (interactive — hidden in print) ───────────── */}
+        <button
+          onClick={() => window.print()}
+          className="no-print w-full py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors"
+        >
+          Save / Print Report
+        </button>
 
         {/* ── Footer ───────────────────────────────────────────────────── */}
         <div className="text-center pt-2 pb-6">

@@ -37,12 +37,16 @@ type RisksRawSnapshot = {
   branches: { id: string; name: string }[];
   branchesSnap: { docs: any[] };
   anyIdToCanonical: Map<string, string>;
-  testScoresSnap:  { docs: any[] };
-  attendanceSnap:  { docs: any[] };
-  incidentsSnap:   { docs: any[] };
-  studentsSnap:    { docs: any[] };
-  teachersSnap:    { docs: any[] };
-  enrollmentsSnap: { docs: any[] };
+  testScoresSnap:      { docs: any[] };
+  /* Co-canonical with test_scores per owner_dashboard_alternate_data_sources
+     memory — schools that write through the gradebook flow land here, those
+     using direct test entry land in test_scores. Reading only one drops ~40%. */
+  gradebookScoresSnap: { docs: any[] };
+  attendanceSnap:      { docs: any[] };
+  incidentsSnap:       { docs: any[] };
+  studentsSnap:        { docs: any[] };
+  teachersSnap:        { docs: any[] };
+  enrollmentsSnap:     { docs: any[] };
 };
 
 const RISKS_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -91,13 +95,14 @@ async function loadRisksSnapshot(uid: string): Promise<RisksRawSnapshot> {
   });
 
   // Parallel fetch of every needed root collection — single round-trip.
-  const [testScoresSnap, attendanceSnap, incidentsSnap, studentsSnap, teachersSnap, enrollmentsSnap] = await Promise.all([
-    scopedDocs("test_scores",  uid),
-    scopedDocs("attendance",   uid),
-    scopedDocs("incidents",    uid),
-    scopedDocs("students",     uid),
-    scopedDocs("teachers",     uid),
-    scopedDocs("enrollments",  uid),
+  const [testScoresSnap, gradebookScoresSnap, attendanceSnap, incidentsSnap, studentsSnap, teachersSnap, enrollmentsSnap] = await Promise.all([
+    scopedDocs("test_scores",      uid),
+    scopedDocs("gradebook_scores", uid),
+    scopedDocs("attendance",       uid),
+    scopedDocs("incidents",        uid),
+    scopedDocs("students",         uid),
+    scopedDocs("teachers",         uid),
+    scopedDocs("enrollments",      uid),
   ]);
 
   const snapshot: RisksRawSnapshot = {
@@ -108,7 +113,7 @@ async function loadRisksSnapshot(uid: string): Promise<RisksRawSnapshot> {
     branches,
     branchesSnap: { docs: branchesSnap.docs },
     anyIdToCanonical,
-    testScoresSnap, attendanceSnap, incidentsSnap, studentsSnap, teachersSnap, enrollmentsSnap,
+    testScoresSnap, gradebookScoresSnap, attendanceSnap, incidentsSnap, studentsSnap, teachersSnap, enrollmentsSnap,
   };
   risksCache = snapshot;
   return snapshot;
@@ -164,7 +169,7 @@ export async function fetchRisksOverview(selectedBranchId: string = "all"): Prom
   const {
     thresholds, schoolEmail, schoolOwnerName, schoolName, notifCriticalAlerts,
     branches, anyIdToCanonical,
-    testScoresSnap, attendanceSnap, incidentsSnap, studentsSnap, teachersSnap, enrollmentsSnap,
+    testScoresSnap, gradebookScoresSnap, attendanceSnap, incidentsSnap, studentsSnap, teachersSnap, enrollmentsSnap,
   } = snap;
 
   /* Cross-page cache coordination: analyticsService caches the same kinds of
@@ -218,11 +223,17 @@ export async function fetchRisksOverview(selectedBranchId: string = "all"): Prom
     if (!attByStudent.has(sid)) attByStudent.set(sid, []);
     attByStudent.get(sid)!.push(d.data());
   });
-  (testScoresSnap.docs as any[]).forEach(d => {
-    const sid = d.data().studentId;
-    if (!sid) return;
-    if (!resByStudent.has(sid)) resByStudent.set(sid, []);
-    resByStudent.get(sid)!.push(d.data());
+  /* Merge BOTH score collections — schools using direct test entry write to
+     test_scores; schools using the gradebook flow write to gradebook_scores.
+     Reading only one collection silently drops ~40% of records and would make
+     a school's academic risk look healthier than reality. */
+  [testScoresSnap, gradebookScoresSnap].forEach(snap => {
+    (snap.docs as any[]).forEach(d => {
+      const sid = d.data().studentId;
+      if (!sid) return;
+      if (!resByStudent.has(sid)) resByStudent.set(sid, []);
+      resByStudent.get(sid)!.push(d.data());
+    });
   });
   (incidentsSnap.docs as any[]).forEach(d => {
     const sid = d.data().studentId;
@@ -567,6 +578,10 @@ export type AlertDetailData = {
   alertId:    string;
   title:      string;
   type:       'critical' | 'warning' | 'info';
+  /* Drives whether the page renders attendance-style metrics + Y[50,100] %
+     chart, or academic-style metrics + Y[0,100] score chart. Carried out
+     of the alertId prefix (crit/warn → attendance, score → academic). */
+  kind:       'attendance' | 'academic';
   status:     string;
   branchName: string;
   alertNum:   string;
@@ -574,113 +589,128 @@ export type AlertDetailData = {
   metrics: { label: string; value: string; note: string; color: string }[];
   description: string;
   trend:    { day: string; pct: number }[];
+  trendLabel:       string;  // e.g. "Attendance Trend (Last 7 Days)" or "Test Score Trend (Last 4 Weeks)"
+  affectedSubtitle: string;  // e.g. "(below 80% attendance)" or "(below 60% average)"
   baseline: number;
+  baselineLabel:    string;  // e.g. "Warning" / "Passing" — what the green dashed line means
   affectedStudents: { initials: string; name: string; pct: string; color: string }[];
   actions: { title: string; sub: string; done: boolean }[];
   historicalAlerts: { title: string; status: string; branch: string; period: string; resolvedIn: string }[];
   totalStudentsInBranch: number;
   durationDays: number;
+  /* When the parent overview said "N students at risk in branch X" but
+     detail can't resolve a single student to that branch, surface the
+     mapping issue rather than showing an honest-but-confusing empty page.
+     Mirrors RisksData.mappingIssue but scoped to this single branch. */
+  mappingIssue: { totalSchoolStudents: number } | null;
 };
 
 export async function fetchAlertDetail(alertId: string): Promise<AlertDetailData> {
   const uid = auth.currentUser?.uid;
   if (!uid) throw new Error("Not authenticated");
 
-  // Parse alertId → type + branchId  e.g. "crit-abc123" or "warn-abc123"
+  /* Parse alertId — supports the three prefixes that fetchRisksOverview emits:
+       crit-{branchId}  → attendance critical
+       warn-{branchId}  → attendance warning
+       score-{branchId} → academic critical
+     Previously this only handled crit/warn and silently downgraded score to
+     'info', mis-rendering "Low Academic Performance" alerts as "Attendance
+     Monitoring" with the wrong chart, wrong students, wrong description.
+     branchId may itself contain dashes (custom IDs) — slice from FIRST dash. */
   const dashIdx  = alertId.indexOf('-');
   const prefix   = dashIdx !== -1 ? alertId.slice(0, dashIdx) : alertId;
   const branchId = dashIdx !== -1 ? alertId.slice(dashIdx + 1) : alertId;
+  const alertKind: 'attendance' | 'academic' = prefix === 'score' ? 'academic' : 'attendance';
   const alertType: 'critical' | 'warning' | 'info' =
-    prefix === 'crit' ? 'critical' : prefix === 'warn' ? 'warning' : 'info';
+    prefix === 'crit' || prefix === 'score' ? 'critical' :
+    prefix === 'warn' ? 'warning' : 'info';
 
   /* Use the same cached raw snapshot as fetchRisksOverview — students,
-     attendance, and branches are already loaded. Saves three round-trips
-     when the user clicks an alert from the overview list. */
+     attendance, scores, branches, teachers, enrollments are already loaded.
+     Saves several round-trips when the user clicks through from the overview. */
   const snap = await loadRisksSnapshot(uid);
-  const { branchesSnap, studentsSnap, attendanceSnap } = snap;
+  const {
+    branchesSnap, studentsSnap, attendanceSnap, testScoresSnap, gradebookScoresSnap,
+    teachersSnap, enrollmentsSnap, anyIdToCanonical, thresholds,
+  } = snap;
 
   const branchDoc  = branchesSnap.docs.find((d: any) => (d.data().branchId || d.id) === branchId);
   const branchName = branchDoc?.data()?.name || branchDoc?.data()?.schoolName || "Branch";
 
-  // Students belonging to this branch
+  /* Use the SAME canonical-resolution chain as fetchRisksOverview so a school
+     whose students are reached only via the doc-id or enrollment-chain fallback
+     in the overview also resolves here. Previously this used raw equality on
+     `s.schoolId === branchId || s.branchId === branchId` and quietly returned
+     0 affected students for any school whose mapping required the fallback —
+     so the parent overview card said "12 students affected" but the detail
+     page showed an empty list. See branchid_inference_lag memory. */
+  const resolveCanonical = (s: any): string => {
+    for (const key of ["branchId", "schoolId", "school_id", "uid"]) {
+      const v = s[key];
+      if (v && anyIdToCanonical.has(v)) return anyIdToCanonical.get(v)!;
+    }
+    return s.branchId || s.schoolId || s.school_id || "";
+  };
+
+  // Build teacher→branch map via canonical resolution + doc-id + uid field
+  const teacherBranchMap = new Map<string, string>();
+  (teachersSnap.docs as any[]).forEach(d => {
+    const t = d.data();
+    let cid = resolveCanonical(t);
+    if (!cid) cid = anyIdToCanonical.get(d.id) || "";
+    if (!cid && t.uid) cid = anyIdToCanonical.get(t.uid) || "";
+    if (cid) teacherBranchMap.set(d.id, cid);
+  });
+
+  // Student→branch via enrollment chain (student → teacher → branch)
+  const studentBranchViaEnrollment = new Map<string, string>();
+  (enrollmentsSnap.docs as any[]).forEach(d => {
+    const e = d.data();
+    const sid = e.studentId as string;
+    const tid = e.teacherId as string;
+    if (!sid || studentBranchViaEnrollment.has(sid)) return;
+    const cid = teacherBranchMap.get(tid);
+    if (cid) studentBranchViaEnrollment.set(sid, cid);
+  });
+
+  // Identify students belonging to this branch
   const branchStudentIds = new Set<string>();
   const studentNames = new Map<string, string>();
   (studentsSnap.docs as any[]).forEach(d => {
     const s = d.data();
-    if (s.schoolId === branchId || s.branchId === branchId) {
-      branchStudentIds.add(d.id);
-      const name = [s.firstName || s.name || "Student", s.lastName || ""].join(" ").trim();
-      studentNames.set(d.id, name);
-    }
+    let cid = resolveCanonical(s);
+    if (cid !== branchId) cid = studentBranchViaEnrollment.get(d.id) || "";
+    if (cid !== branchId) cid = anyIdToCanonical.get(d.id) || "";
+    if (cid !== branchId) return;
+    branchStudentIds.add(d.id);
+    /* Build display name from all known shape variants. If a student has no
+       firstName / name / lastName fields, fall back to "Student {id-suffix}"
+       — previously every nameless student rendered as just "Student", causing
+       collisions in the affected-students list (multiple identical rows with
+       identical "S" initials). The 4-char id suffix gives uniqueness without
+       leaking the full doc id into the UI. */
+    const fullName = [s.firstName || s.name || "", s.lastName || ""].join(" ").trim();
+    const displayName = fullName || `Student ${d.id.slice(-4)}`;
+    studentNames.set(d.id, displayName);
   });
 
-  // Per-student attendance
-  const studentAtt = new Map<string, { total: number; present: number }>();
-  branchStudentIds.forEach(id => studentAtt.set(id, { total: 0, present: 0 }));
+  /* Mapping diagnostics — surface the case where the parent overview said
+     "branch X has N at-risk students" but our resolution chain found zero
+     students in this branch. Without this banner the user sees an empty
+     "Affected Students" panel with 0 metrics and assumes the branch is
+     healthy, when really it's a student.branchId hygiene issue. Mirrors the
+     fetchRisksOverview mappingIssue contract but scoped to this single branch. */
+  const totalSchoolStudents = studentsSnap.docs.length;
+  const mappingIssue: AlertDetailData["mappingIssue"] =
+    branchStudentIds.size === 0 && totalSchoolStudents > 0 && branchDoc !== undefined
+      ? { totalSchoolStudents }
+      : null;
 
-  // Last-7-days date strings
-  const today = new Date();
-  const last7: string[] = [];
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(today); d.setDate(d.getDate() - i);
-    last7.push(d.toLocaleDateString("en-CA")); // YYYY-MM-DD
-  }
-  const dailyAtt = new Map<string, { total: number; present: number }>();
-  last7.forEach(ds => dailyAtt.set(ds, { total: 0, present: 0 }));
+  const today          = new Date();
+  const totalStudents  = branchStudentIds.size;
+  const COLORS         = ["#ef4444","#f59e0b","#8b5cf6","#3b82f6","#10b981","#ec4899"];
 
-  (attendanceSnap.docs as any[]).forEach(d => {
-    const a    = d.data();
-    const sid  = a.studentId || "";
-    if (!branchStudentIds.has(sid)) return;
-    const prev = studentAtt.get(sid)!;
-    prev.total++;
-    if (a.status?.toLowerCase() === "present") prev.present++;
-
-    const dateStr = a.date || a.dateStr || a.createdAt?.toDate?.()?.toLocaleDateString("en-CA") || "";
-    if (dailyAtt.has(dateStr)) {
-      const dp = dailyAtt.get(dateStr)!;
-      dp.total++;
-      if (a.status?.toLowerCase() === "present") dp.present++;
-    }
-  });
-
-  // Trend for chart
-  const trend = last7.map((ds, i) => {
-    const dp  = dailyAtt.get(ds)!;
-    const day = new Date(today);
-    day.setDate(day.getDate() - (6 - i));
-    const label = day.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-    return { day: label, pct: dp.total > 0 ? Math.round(dp.present / dp.total * 100) : 0 };
-  });
-
-  // Overall branch attendance
-  let allTotal = 0, allPresent = 0;
-  studentAtt.forEach(v => { allTotal += v.total; allPresent += v.present; });
-  const overallPct = allTotal > 0 ? Math.round(allPresent / allTotal * 100) : 0;
-  const baseline   = 85;
-
-  // Affected students (below 80%)
-  const affected = Array.from(studentAtt.entries())
-    .filter(([, v]) => v.total > 0 && Math.round(v.present / v.total * 100) < 80)
-    .map(([sid, v]) => ({
-      name:  studentNames.get(sid) || "Student",
-      pct:   Math.round(v.present / v.total * 100),
-    }))
-    .sort((a, b) => a.pct - b.pct)
-    .slice(0, 6);
-
-  const COLORS = ["#ef4444","#f59e0b","#8b5cf6","#3b82f6","#10b981","#ec4899"];
-  const affectedStudents = affected.map((s, i) => ({
-    initials: s.name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2),
-    name:     s.name,
-    pct:      `${s.pct}%`,
-    color:    COLORS[i % COLORS.length],
-  }));
-
-  const totalStudents = branchStudentIds.size;
-  /* Unique alert number — full-branchId hash, not just first char.
-     Previously two branches starting with the same letter got identical
-     alert numbers (e.g. "Banjarahills" and "Bandra" both → RA-2026-XXXX). */
+  /* Unique alert number — full-branchId hash, not just first char. */
   const branchHash = (() => {
     let h = 0;
     for (let i = 0; i < branchId.length; i++) {
@@ -690,52 +720,300 @@ export async function fetchAlertDetail(alertId: string): Promise<AlertDetailData
   })();
   const alertNum = `RA-${new Date().getFullYear()}-${branchHash}`;
 
-  /* Real "detected on" — earliest day in the 7-day trend window that fell
-     below baseline. Previously this was always today's date, even for an
-     alert that started a week ago. The trend array is in chronological
-     order (oldest → newest), so findIndex gives us the first below-baseline
-     day. The date is reconstructed from the index offset. */
-  const firstBelowIdx = trend.findIndex(t => t.pct > 0 && t.pct < baseline);
-  const detectedDate  = firstBelowIdx >= 0
-    ? new Date(today.getTime() - (6 - firstBelowIdx) * 24 * 60 * 60 * 1000)
-    : new Date();
-  const detectedOn = detectedDate.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+  /* ──────────────────────────────────────────────────────────────────────
+     Branch on alertKind. Both branches build the same AlertDetailData shape
+     so the page renders with one render path; only labels + axis ranges
+     differ (driven by `kind` + `trendLabel`).
+     ────────────────────────────────────────────────────────────────────── */
+  let metrics: AlertDetailData["metrics"];
+  let description: string;
+  let actions: AlertDetailData["actions"];
+  let trend: AlertDetailData["trend"];
+  let trendLabel: string;
+  let affectedSubtitle: string;
+  let baseline: number;
+  let baselineLabel: string;
+  let affectedStudents: AlertDetailData["affectedStudents"];
+  let detectedOn: string;
+  let durationDays: number;
+  let title: string;
 
-  // Duration: actual count of days below baseline in the trend window.
-  const durationDays = trend.filter(t => t.pct > 0 && t.pct < baseline).length || 1;
+  if (alertKind === 'attendance') {
+    // ── Per-student attendance ─────────────────────────────────────────────
+    const studentAtt = new Map<string, { total: number; present: number }>();
+    branchStudentIds.forEach(id => studentAtt.set(id, { total: 0, present: 0 }));
 
-  const description = alertType === 'critical'
-    ? `Significant attendance decline detected at ${branchName}. ${affected.length} students have attendance below 80%, with overall branch attendance at ${overallPct}%. Immediate intervention is required to prevent further academic decline.`
-    : `Attendance monitoring alert for ${branchName}. ${affected.length} students showing attendance patterns below normal thresholds. Close monitoring and early action can prevent escalation.`;
+    // Last-7-days date strings (chronological)
+    const last7: string[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today); d.setDate(d.getDate() - i);
+      last7.push(d.toLocaleDateString("en-CA")); // YYYY-MM-DD
+    }
+    const dailyAtt = new Map<string, { total: number; present: number }>();
+    last7.forEach(ds => dailyAtt.set(ds, { total: 0, present: 0 }));
 
-  const actions = alertType === 'critical' ? [
-    { title: "Contact parents of students with <70% attendance", sub: "Priority: High • Estimated time: 2 hours", done: false },
-    { title: "Review attendance records and identify patterns", sub: "Priority: High • Estimated time: 1 hour", done: false },
-    { title: "Schedule parent-teacher meeting for affected students", sub: "Priority: Medium • Estimated time: 3 hours", done: false },
-  ] : [
-    { title: "Monitor attendance trends for next 2 weeks", sub: "Priority: Medium • Ongoing", done: false },
-    { title: "Send attendance reminder notification to parents", sub: "Priority: Low • Estimated time: 30 minutes", done: false },
-    { title: "Review class schedule for potential conflicts", sub: "Priority: Low • Estimated time: 1 hour", done: false },
-  ];
+    (attendanceSnap.docs as any[]).forEach(d => {
+      const a    = d.data();
+      const sid  = a.studentId || "";
+      if (!branchStudentIds.has(sid)) return;
+      const prev = studentAtt.get(sid)!;
+      prev.total++;
+      if (a.status?.toLowerCase() === "present") prev.present++;
 
-  /* Historical alerts from resolved alert_resolutions collection — scoped.
-     Previously this block was largely fabricated:
-       - title alternated between "Attendance Drop" / "Academic Risk" by
-         array index (i === 0 ? ... : ...) regardless of the actual alertId
-         type prefix
-       - branch was always the CURRENT branchName, ignoring which branch
-         the resolution was actually about
-       - resolvedIn was `Math.random() * 7 + 3` — pure fiction
-     Now: parse the alertId (format: "{prefix}-{branchId}") to recover the
-     real type + real branch. Drop the fake resolvedIn since we don't track
-     the alert's first-detection time anywhere — making one up was
-     misleading. */
+      const dateStr = a.date || a.dateStr || a.createdAt?.toDate?.()?.toLocaleDateString("en-CA") || "";
+      if (dailyAtt.has(dateStr)) {
+        const dp = dailyAtt.get(dateStr)!;
+        dp.total++;
+        if (a.status?.toLowerCase() === "present") dp.present++;
+      }
+    });
+
+    trend = last7.map((ds, i) => {
+      const dp  = dailyAtt.get(ds)!;
+      const day = new Date(today);
+      day.setDate(day.getDate() - (6 - i));
+      const label = day.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      return { day: label, pct: dp.total > 0 ? Math.round(dp.present / dp.total * 100) : 0 };
+    });
+
+    let allTotal = 0, allPresent = 0;
+    studentAtt.forEach(v => { allTotal += v.total; allPresent += v.present; });
+    const overallPct = allTotal > 0 ? Math.round(allPresent / allTotal * 100) : 0;
+    /* Use the school's CONFIGURED warning threshold as the chart's reference
+       line + the "affected" cutoff. Previously hardcoded 85 (baseline) and 80
+       (affected cutoff) — schools that customized thresholds.attendanceWarning
+       to 75 or 90 saw a chart line and "Affected (below 80%)" copy that didn't
+       match their own settings. */
+    baseline      = thresholds.attendanceWarning;
+    baselineLabel = "Warning";
+
+    const affected = Array.from(studentAtt.entries())
+      .filter(([, v]) => v.total > 0 && Math.round(v.present / v.total * 100) < baseline)
+      .map(([sid, v]) => ({
+        name:  studentNames.get(sid) || "Student",
+        pct:   Math.round(v.present / v.total * 100),
+      }))
+      .sort((a, b) => a.pct - b.pct)
+      .slice(0, 6);
+
+    affectedStudents = affected.map((s, i) => ({
+      initials: s.name.split(" ").map((n: string) => n[0] || "").join("").toUpperCase().slice(0, 2) || "S",
+      name:     s.name,
+      pct:      `${s.pct}%`,
+      color:    COLORS[i % COLORS.length],
+    }));
+
+    /* Detected-on: earliest day in the trend window that fell below baseline.
+       If trend has no real data (all zeros), keep null instead of misleading
+       "today" date — we surface that honestly in the metrics note. */
+    const firstBelowIdx = trend.findIndex(t => t.pct > 0 && t.pct < baseline);
+    const detectedDate  = firstBelowIdx >= 0
+      ? new Date(today.getTime() - (6 - firstBelowIdx) * 24 * 60 * 60 * 1000)
+      : null;
+    detectedOn = detectedDate
+      ? detectedDate.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })
+      : "No data recorded";
+    durationDays = trend.filter(t => t.pct > 0 && t.pct < baseline).length || 0;
+
+    title = alertType === 'critical'
+      ? `Attendance Drop — ${branchName}`
+      : `Attendance Monitoring — ${branchName}`;
+
+    trendLabel       = "Attendance Trend (Last 7 Days)";
+    affectedSubtitle = `(below ${baseline}% attendance)`;
+
+    description = alertType === 'critical'
+      ? `Significant attendance decline detected at ${branchName}. ${affected.length} students have attendance below ${baseline}%, with overall branch attendance at ${overallPct}%. Immediate intervention is required to prevent further academic decline.`
+      : `Attendance monitoring alert for ${branchName}. ${affected.length} students showing attendance patterns below normal thresholds. Close monitoring and early action can prevent escalation.`;
+
+    /* Action priority targets the CRITICAL threshold (escalation tier), since
+       students dipping below warning need contact, but students below critical
+       need urgent contact. Both come from school settings. */
+    actions = alertType === 'critical' ? [
+      { title: `Contact parents of students with <${thresholds.attendanceCritical}% attendance`, sub: "Priority: High • Estimated time: 2 hours", done: false },
+      { title: "Review attendance records and identify patterns", sub: "Priority: High • Estimated time: 1 hour", done: false },
+      { title: "Schedule parent-teacher meeting for affected students", sub: "Priority: Medium • Estimated time: 3 hours", done: false },
+    ] : [
+      { title: "Monitor attendance trends for next 2 weeks", sub: "Priority: Medium • Ongoing", done: false },
+      { title: "Send attendance reminder notification to parents", sub: "Priority: Low • Estimated time: 30 minutes", done: false },
+      { title: "Review class schedule for potential conflicts", sub: "Priority: Low • Estimated time: 1 hour", done: false },
+    ];
+
+    metrics = [
+      {
+        label: "Current Attendance",
+        value: allTotal > 0 ? `${overallPct}%` : "N/A",
+        note: allTotal > 0
+          ? `↓ ${Math.max(0, baseline - overallPct)}% from baseline (${baseline}%)`
+          : "No attendance data recorded",
+        color: overallPct < 75 ? "text-rose-500" : "text-amber-500",
+      },
+      {
+        label: "Students Affected",
+        value: affected.length.toString(),
+        note: `Out of ${totalStudents} total`,
+        color: "text-[#111827]",
+      },
+      {
+        label: "Duration",
+        value: durationDays > 0 ? `${durationDays} day${durationDays !== 1 ? "s" : ""}` : "N/A",
+        note: durationDays > 0 ? `Since ${detectedOn}` : "No below-baseline days in window",
+        color: "text-[#111827]",
+      },
+    ];
+  } else {
+    // ── Academic alert: per-student avg from BOTH score collections ────────
+    const PASS_THRESHOLD = 60;  // matches fetchRisksOverview's lowScoreCount cutoff
+    baseline      = PASS_THRESHOLD;
+    baselineLabel = "Passing";
+
+    /* Combine test_scores + gradebook_scores per owner_dashboard_alternate_data_sources
+       memory — without both, ~40% of a school's records are silently ignored. */
+    const scoresByStudent = new Map<string, any[]>();
+    [testScoresSnap, gradebookScoresSnap].forEach(s => {
+      (s.docs as any[]).forEach(d => {
+        const data = d.data();
+        const sid  = data.studentId;
+        if (!sid || !branchStudentIds.has(sid)) return;
+        if (!scoresByStudent.has(sid)) scoresByStudent.set(sid, []);
+        scoresByStudent.get(sid)!.push(data);
+      });
+    });
+
+    /* Per-student avg — only from VALID (>0) numeric values. A score doc with
+       no `percentage` and no `score` field would otherwise contribute 0 and
+       drag the avg artificially low (per bug_pattern_score_zero_no_data). */
+    const studentAvg = new Map<string, number>();
+    scoresByStudent.forEach((arr, sid) => {
+      const valid = arr
+        .map((r: any) => Number(r.percentage ?? r.score))
+        .filter((v: number) => Number.isFinite(v) && v > 0);
+      if (valid.length > 0) {
+        studentAvg.set(sid, valid.reduce((a, b) => a + b, 0) / valid.length);
+      }
+    });
+
+    // Affected: students with avg below passing threshold
+    const affected = Array.from(studentAvg.entries())
+      .filter(([, avg]) => avg < PASS_THRESHOLD)
+      .map(([sid, avg]) => ({
+        name: studentNames.get(sid) || "Student",
+        pct:  Math.round(avg),
+      }))
+      .sort((a, b) => a.pct - b.pct)
+      .slice(0, 6);
+
+    affectedStudents = affected.map((s, i) => ({
+      initials: s.name.split(" ").map((n: string) => n[0] || "").join("").toUpperCase().slice(0, 2) || "S",
+      name:     s.name,
+      pct:      `${s.pct}%`,
+      color:    COLORS[i % COLORS.length],
+    }));
+
+    // Branch overall avg
+    const allAvgs = Array.from(studentAvg.values());
+    const overallAvg = allAvgs.length > 0
+      ? Math.round(allAvgs.reduce((a, b) => a + b, 0) / allAvgs.length)
+      : 0;
+
+    /* Weekly trend over last 4 weeks. Test/gradebook scores aren't daily so
+       a 7-day chart would be sparse — bucket by week instead. Date sources
+       per filterByTime field-drift memory: try date / dateStr / createdAt /
+       timestamp / updatedAt (different writers use different fields). */
+    const todayMs = today.getTime();
+    const weekly: { sum: number; count: number }[] = [
+      { sum: 0, count: 0 }, { sum: 0, count: 0 }, { sum: 0, count: 0 }, { sum: 0, count: 0 },
+    ];
+    scoresByStudent.forEach(arr => {
+      arr.forEach(r => {
+        const v = Number(r.percentage ?? r.score);
+        if (!Number.isFinite(v) || v <= 0) return;
+        let dateStr: string = r.date || r.dateStr || "";
+        if (!dateStr && r.createdAt?.toDate) {
+          try { dateStr = r.createdAt.toDate().toISOString(); } catch { /* skip */ }
+        }
+        if (!dateStr && r.timestamp?.toDate) {
+          try { dateStr = r.timestamp.toDate().toISOString(); } catch { /* skip */ }
+        }
+        if (!dateStr && r.updatedAt?.toDate) {
+          try { dateStr = r.updatedAt.toDate().toISOString(); } catch { /* skip */ }
+        }
+        if (!dateStr) return;
+        const dMs = new Date(dateStr).getTime();
+        if (isNaN(dMs)) return;
+        const diffDays = Math.floor((todayMs - dMs) / (1000 * 60 * 60 * 24));
+        if (diffDays < 0 || diffDays > 27) return;
+        const weekIdx = Math.floor(diffDays / 7);
+        weekly[weekIdx].sum   += v;
+        weekly[weekIdx].count += 1;
+      });
+    });
+
+    trend = [
+      { day: '3 Wks Ago', pct: weekly[3].count > 0 ? Math.round(weekly[3].sum / weekly[3].count) : 0 },
+      { day: '2 Wks Ago', pct: weekly[2].count > 0 ? Math.round(weekly[2].sum / weekly[2].count) : 0 },
+      { day: 'Last Wk',   pct: weekly[1].count > 0 ? Math.round(weekly[1].sum / weekly[1].count) : 0 },
+      { day: 'This Wk',   pct: weekly[0].count > 0 ? Math.round(weekly[0].sum / weekly[0].count) : 0 },
+    ];
+
+    // Detection week — earliest week below baseline
+    const firstBelowIdx = trend.findIndex(t => t.pct > 0 && t.pct < baseline);
+    const detectedDate  = firstBelowIdx >= 0
+      ? new Date(todayMs - (3 - firstBelowIdx) * 7 * 24 * 60 * 60 * 1000)
+      : null;
+    detectedOn = detectedDate
+      ? detectedDate.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })
+      : "No data recorded";
+    // Each below-baseline week ≈ 7 days
+    durationDays = trend.filter(t => t.pct > 0 && t.pct < baseline).length * 7;
+
+    title = `Low Academic Performance — ${branchName}`;
+
+    trendLabel       = "Test Score Trend (Last 4 Weeks)";
+    affectedSubtitle = `(below ${PASS_THRESHOLD}% average)`;
+
+    description = `Academic performance decline at ${branchName}. ${affected.length} students have an average below ${PASS_THRESHOLD}%, with overall branch average at ${overallAvg}%. Targeted academic intervention is needed to prevent further decline.`;
+
+    actions = [
+      { title: "Identify subject-area weaknesses for affected students", sub: "Priority: High • Estimated time: 2 hours", done: false },
+      { title: "Schedule remedial classes / peer-tutoring sessions",   sub: "Priority: High • Estimated time: 3 hours", done: false },
+      { title: "Review teaching methodology with subject teachers",     sub: "Priority: Medium • Estimated time: 1 hour", done: false },
+    ];
+
+    metrics = [
+      {
+        label: "Branch Average",
+        value: allAvgs.length > 0 ? `${overallAvg}%` : "N/A",
+        note: allAvgs.length > 0
+          ? `↓ ${Math.max(0, baseline - overallAvg)}% from passing (${baseline}%)`
+          : "No score data recorded",
+        color: overallAvg < 50 ? "text-rose-500" : "text-amber-500",
+      },
+      {
+        label: "Students Affected",
+        value: affected.length.toString(),
+        note: `Out of ${totalStudents} total`,
+        color: "text-[#111827]",
+      },
+      {
+        label: "Duration",
+        value: durationDays > 0 ? `${durationDays} day${durationDays !== 1 ? "s" : ""}` : "N/A",
+        note: durationDays > 0 ? `Since ${detectedOn}` : "No below-passing weeks in window",
+        color: "text-[#111827]",
+      },
+    ];
+  }
+
+  /* Historical alerts — scoped, sorted by most-recent first, then top 3.
+     Previously slice(0, 3) ran BEFORE any sort, so the 3 shown were in
+     document-order (effectively random). Sort by resolvedAt desc first. */
   let historicalAlerts: AlertDetailData["historicalAlerts"] = [];
   try {
     const resSnap = await getDocs(query(collection(db, "alert_resolutions"), where("schoolId", "==", uid)));
     historicalAlerts = resSnap.docs
       .map(d => d.data())
       .filter(d => d.action === "resolved")
+      .sort((a, b) => (b.resolvedAt?.toMillis?.() || 0) - (a.resolvedAt?.toMillis?.() || 0))
       .slice(0, 3)
       .map((d) => {
         const altId = String(d.alertId || "");
@@ -771,38 +1049,17 @@ export async function fetchAlertDetail(alertId: string): Promise<AlertDetailData
 
   return {
     alertId,
-    title: alertType === 'critical'
-      ? `Attendance Drop — ${branchName}`
-      : `Attendance Monitoring — ${branchName}`,
+    title,
     type: alertType,
+    kind: alertKind,
     status: alertType === 'critical' ? 'Critical' : 'Warning',
     branchName, alertNum, detectedOn,
-    metrics: [
-      {
-        label: "Current Attendance",
-        value: allTotal > 0 ? `${overallPct}%` : "N/A",
-        note: allTotal > 0
-          ? `↓ ${Math.max(0, baseline - overallPct)}% from baseline (${baseline}%)`
-          : "No attendance data recorded",
-        color: overallPct < 75 ? "text-rose-500" : "text-amber-500",
-      },
-      {
-        label: "Students Affected",
-        value: affected.length.toString(),
-        note: `Out of ${totalStudents} total`,
-        color: "text-[#111827]",
-      },
-      {
-        label: "Duration",
-        value: `${durationDays} day${durationDays !== 1 ? "s" : ""}`,
-        note: `Since ${detectedOn}`,
-        color: "text-[#111827]",
-      },
-    ],
-    description, trend, baseline, affectedStudents, actions,
+    metrics,
+    description, trend, trendLabel, affectedSubtitle, baseline, baselineLabel, affectedStudents, actions,
     historicalAlerts,
     totalStudentsInBranch: totalStudents,
     durationDays,
+    mappingIssue,
   };
 }
 
