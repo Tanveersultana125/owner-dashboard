@@ -17,6 +17,17 @@ export default defineConfig(({ mode }) => {
       hmr: {
         overlay: true,
       },
+      // Forward unhandled /api/* calls to production Vercel.
+      // The local-email-middleware below intercepts /api/send-email first;
+      // any other /api/* request (e.g. /api/owner-insights AI route) falls
+      // through to this proxy so the local dev server doesn't 404.
+      proxy: {
+        "/api": {
+          target: "https://owner-dashboard-blue.vercel.app",
+          changeOrigin: true,
+          secure: true,
+        },
+      },
     },
     clearScreen: false,
     plugins: [

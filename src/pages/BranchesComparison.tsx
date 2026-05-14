@@ -256,7 +256,8 @@ const T2 = "#002080";
 
 // ── Per-metric value color ramp (shared by card + matrix) ───────────────────
 function valueColorForMetric(metricKey: ComparisonMetricKey, v: number, hasData: boolean): string {
-  if (!hasData) return "#CBD5E1";
+  if (!hasData) return "#475569"; // slate-600 — visible against white tile background
+
   // For "lower is better" metrics (alerts, failures), invert: 0 = green, big = red
   if (metricKey === "activeAlerts" || metricKey === "failedTestCount") {
     return v === 0 ? "#10B981" : v <= 3 ? "#3B82F6" : v <= 8 ? "#F59E0B" : "#F43F5E";
@@ -542,23 +543,80 @@ const BranchCardImpl: React.FC<{
           <Building2 size={isMobile ? 56 : 76} strokeWidth={1.8}/>
         </div>
 
-        {/* Edit / Delete — top-right, hover-revealed on desktop */}
-        <div className={`absolute top-3 right-3 flex items-center gap-1 z-[3] transition-opacity duration-200 ${
-          isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-        }`}>
+        {/* Edit / Delete — top-right, always visible on mobile, hover-revealed on desktop.
+             NOTE: uses inline-style background + `dash-tile` opt-out class so the global
+             `.bg-white[class*="rounded-"]` card-treatment rule in index.css (lift/shadow/::after
+             glow meant for cards) does NOT hijack these tiny action buttons. */}
+        <div
+          className="dash-tile absolute flex items-center gap-2 z-[5]"
+          style={{ top: 14, right: 14 }}
+          onClick={(e) => e.stopPropagation()}
+        >
           <button
             onClick={(e) => { e.stopPropagation(); onEdit(); }}
-            className="w-7 h-7 rounded-lg bg-white/95 border border-slate-200 hover:bg-white hover:border-blue-300 flex items-center justify-center transition-all backdrop-blur-sm"
+            className="dash-tile flex items-center justify-center"
             title="Edit branch"
+            aria-label="Edit branch"
+            style={{
+              width: isMobile ? 34 : 32,
+              height: isMobile ? 34 : 32,
+              borderRadius: 10,
+              background: "rgba(255,255,255,0.96)",
+              border: "1px solid rgba(59,130,246,0.35)",
+              boxShadow: "0 2px 6px rgba(15,23,42,0.10), 0 0 0 1px rgba(255,255,255,0.6) inset",
+              backdropFilter: "blur(6px)",
+              WebkitBackdropFilter: "blur(6px)",
+              cursor: "pointer",
+              padding: 0,
+              transition: "background 0.15s ease, border-color 0.15s ease, transform 0.1s ease",
+            }}
+            onMouseEnter={(e) => {
+              const el = e.currentTarget as HTMLButtonElement;
+              el.style.background = "#EFF6FF";
+              el.style.borderColor = "#3B82F6";
+              el.style.transform = "translateY(-1px)";
+            }}
+            onMouseLeave={(e) => {
+              const el = e.currentTarget as HTMLButtonElement;
+              el.style.background = "rgba(255,255,255,0.96)";
+              el.style.borderColor = "rgba(59,130,246,0.35)";
+              el.style.transform = "translateY(0)";
+            }}
           >
-            <Pencil className="w-3 h-3 text-slate-500" />
+            <Pencil size={isMobile ? 16 : 15} strokeWidth={2.3} color="#1D4ED8" />
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); onDelete(); }}
-            className="w-7 h-7 rounded-lg bg-white/95 border border-slate-200 hover:bg-rose-50 hover:border-rose-300 flex items-center justify-center transition-all backdrop-blur-sm"
+            className="dash-tile flex items-center justify-center"
             title="Delete branch"
+            aria-label="Delete branch"
+            style={{
+              width: isMobile ? 34 : 32,
+              height: isMobile ? 34 : 32,
+              borderRadius: 10,
+              background: "rgba(255,255,255,0.96)",
+              border: "1px solid rgba(244,63,94,0.35)",
+              boxShadow: "0 2px 6px rgba(15,23,42,0.10), 0 0 0 1px rgba(255,255,255,0.6) inset",
+              backdropFilter: "blur(6px)",
+              WebkitBackdropFilter: "blur(6px)",
+              cursor: "pointer",
+              padding: 0,
+              transition: "background 0.15s ease, border-color 0.15s ease, transform 0.1s ease",
+            }}
+            onMouseEnter={(e) => {
+              const el = e.currentTarget as HTMLButtonElement;
+              el.style.background = "#FFF1F2";
+              el.style.borderColor = "#F43F5E";
+              el.style.transform = "translateY(-1px)";
+            }}
+            onMouseLeave={(e) => {
+              const el = e.currentTarget as HTMLButtonElement;
+              el.style.background = "rgba(255,255,255,0.96)";
+              el.style.borderColor = "rgba(244,63,94,0.35)";
+              el.style.transform = "translateY(0)";
+            }}
           >
-            <Trash2 className="w-3 h-3 text-slate-500" />
+            <Trash2 size={isMobile ? 16 : 15} strokeWidth={2.3} color="#E11D48" />
           </button>
         </div>
 
@@ -577,7 +635,7 @@ const BranchCardImpl: React.FC<{
           }}>
             <Building2 size={isMobile ? 19 : 22} color="#FFFFFF" strokeWidth={2.5}/>
           </div>
-          <div className="flex-1 min-w-0 pr-12">
+          <div className="flex-1 min-w-0 pr-[100px] md:pr-[88px]">
             <h3 className="text-[15px] md:text-base font-bold text-[#0F172A] truncate"
               style={{ letterSpacing: "-0.2px" }}>
               {b.name}
@@ -601,16 +659,17 @@ const BranchCardImpl: React.FC<{
             return (
               <div key={m.label} className="rounded-xl p-2.5 md:p-3 relative"
                 style={{
-                  background: "rgba(255,255,255,0.85)",
+                  background: "rgba(255,255,255,0.95)",
                   border: cell?.isLeader
-                    ? `0.5px solid ${accent}77`
-                    : "0.5px solid rgba(255,255,255,0.6)",
-                  backdropFilter: "blur(4px)",
-                  boxShadow: cell?.isLeader ? `inset 0 0 0 1px ${accent}33` : "none",
+                    ? `1px solid ${accent}77`
+                    : "1px solid rgba(148,163,184,0.35)",
+                  boxShadow: cell?.isLeader
+                    ? `inset 0 0 0 1px ${accent}33, 0 1px 3px rgba(15,23,42,0.06)`
+                    : "0 1px 3px rgba(15,23,42,0.06)",
                 }}>
                 <div className="flex items-center gap-1.5 mb-1">
-                  <Icon size={11} color="#94A3B8" strokeWidth={2}/>
-                  <p className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-wider flex-1 truncate">
+                  <Icon size={11} color="#64748B" strokeWidth={2.25}/>
+                  <p className="text-[9px] md:text-[10px] font-bold text-slate-600 uppercase tracking-wider flex-1 truncate">
                     {m.label}
                   </p>
                   {cell?.isLeader && has && (
@@ -675,7 +734,7 @@ const BranchCardImpl: React.FC<{
             </>
           ) : (
             <p className="text-[10px] md:text-[11px] font-semibold leading-snug"
-              style={{ color: "#64748B" }}>
+              style={{ color: "#334155" }}>
               {mode === "empty"
                 ? "0 students enrolled — first enrollment will appear here"
                 : "Awaiting performance data — appears once attendance/scores are recorded"}
