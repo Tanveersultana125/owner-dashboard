@@ -604,7 +604,10 @@ export default function ReportsCenter() {
   const stats = dashboard?.stats;
   const scheduled = dashboard?.scheduledReports || [];
 
-  const totalReports = stats?.totalReports ?? 12;
+  // Default to the registry size if stats hasn't loaded yet. Hardcoding 12
+  // would drift if REPORT_REGISTRY ever grows; computing from the imported
+  // map keeps them in lock-step.
+  const totalReports = stats?.totalReports ?? Object.keys(REPORT_REGISTRY).length;
   const scheduledCount = stats?.scheduled ?? 0;
   const recentDownloads = stats?.recentDownloads ?? 0;
   const favorites = stats?.favorites ?? 0;
@@ -781,36 +784,88 @@ export default function ReportsCenter() {
         )}
       </div>
 
-      {/* ── Board Report Section ─────────────────────────────────────────── */}
-      <div className="bg-gradient-to-br from-[#1e3a8a] to-[#2563eb] rounded-2xl md:rounded-[2rem] p-4 md:p-8 text-white shadow-xl shadow-blue-900/20">
-        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 md:gap-6">
+      {/* ── Board Report Section ───────────────────────────────────────────
+          Inline styles instead of Tailwind arbitrary classes — the prior
+          `bg-gradient-to-br from-[#1e3a8a] to-[#2563eb]` was rendering as
+          near-transparent on the user's build (likely a Tailwind purge or
+          JIT-arbitrary class miss), making the card almost invisible against
+          the page background. Inline styles guarantee the dark gradient
+          renders even if Tailwind config drifts. */}
+      <div style={{
+        background: "linear-gradient(135deg, #001A4D 0%, #0033CC 55%, #0055FF 100%)",
+        borderRadius: isMobile ? 18 : 28,
+        padding: isMobile ? "20px 18px" : "30px 36px",
+        color: "#fff",
+        boxShadow: "0 14px 38px rgba(0,8,40,0.40), 0 4px 12px rgba(0,8,40,0.22)",
+        position: "relative",
+        overflow: "hidden",
+      }}>
+        {/* Subtle radial highlight so the card has depth */}
+        <div style={{
+          position: "absolute", top: -40, right: -40, width: 240, height: 240,
+          borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 65%)",
+          pointerEvents: "none",
+        }} />
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 md:gap-6" style={{ position: "relative", zIndex: 1 }}>
           <div className="flex items-start gap-3 md:gap-4 min-w-0">
-            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-white/15 flex items-center justify-center shrink-0">
-              <Building2 className="w-5 h-5 md:w-6 md:h-6 text-white" />
+            <div style={{
+              width: isMobile ? 44 : 52, height: isMobile ? 44 : 52,
+              borderRadius: isMobile ? 13 : 16,
+              background: "rgba(255,255,255,0.18)",
+              border: "1px solid rgba(255,255,255,0.28)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              flexShrink: 0,
+              boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+            }}>
+              <Building2 size={isMobile ? 22 : 26} color="#fff" strokeWidth={2.2} />
             </div>
             <div className="min-w-0">
               <div className="flex items-center flex-wrap gap-2 mb-1">
-                <h3 className="text-sm md:text-lg font-black">One-Click Board Report</h3>
-                <span className="text-[9px] font-black uppercase tracking-widest bg-white/20 text-white px-2 py-0.5 rounded-full">PDF</span>
+                <h3 style={{ fontSize: isMobile ? 15 : 20, fontWeight: 800, color: "#fff", letterSpacing: "-0.4px", margin: 0 }}>One-Click Board Report</h3>
+                <span style={{
+                  fontSize: 9, fontWeight: 800, color: "#fff",
+                  background: "rgba(255,255,255,0.22)",
+                  padding: "3px 9px", borderRadius: 999,
+                  letterSpacing: "0.12em", textTransform: "uppercase",
+                }}>PDF</span>
               </div>
-              <p className="text-blue-100 text-xs md:text-sm font-medium leading-snug">
+              <p style={{
+                color: "rgba(255,255,255,0.88)",
+                fontSize: isMobile ? 12 : 13, fontWeight: 500, lineHeight: 1.5,
+                marginTop: 4, marginBottom: 0,
+              }}>
                 Auto-generates a professional 12-page PDF with executive summary, branch heatmap,
                 fee waterfall, risk analysis &amp; action items — ready for your trustees.
               </p>
-              <div className="flex flex-wrap items-center gap-1.5 md:gap-2 mt-2 md:mt-3">
+              <div className="flex flex-wrap items-center" style={{ gap: 6, marginTop: 12 }}>
                 {["Executive Summary", "Branch Performance", "Risk Analysis", "Fee Collection", "Recommendations"].map(s => (
-                  <span key={s} className="text-[9px] md:text-[10px] font-bold bg-white/10 text-blue-100 px-2 md:px-2.5 py-0.5 md:py-1 rounded-full whitespace-nowrap">{s}</span>
+                  <span key={s} style={{
+                    fontSize: 10, fontWeight: 700, color: "#fff",
+                    background: "rgba(255,255,255,0.14)",
+                    border: "1px solid rgba(255,255,255,0.22)",
+                    padding: "4px 10px", borderRadius: 999, whiteSpace: "nowrap",
+                  }}>{s}</span>
                 ))}
               </div>
             </div>
           </div>
           <div className="flex flex-col items-stretch lg:items-end gap-2.5 md:gap-3 shrink-0 w-full lg:w-auto">
             <div className="flex items-center gap-2 justify-between lg:justify-end">
-              <label className="text-[11px] md:text-xs font-bold text-blue-200">Quarter:</label>
+              <label style={{ fontSize: isMobile ? 11 : 12, fontWeight: 700, color: "rgba(255,255,255,0.85)" }}>Quarter:</label>
               <select
                 value={boardQuarter}
                 onChange={e => setBoardQuarter(e.target.value)}
-                className="bg-white/10 border border-white/20 text-white text-xs font-bold rounded-lg px-3 py-1.5 outline-none"
+                style={{
+                  background: "rgba(255,255,255,0.16)",
+                  border: "1px solid rgba(255,255,255,0.30)",
+                  color: "#fff",
+                  fontSize: 12, fontWeight: 700,
+                  borderRadius: 10,
+                  padding: "7px 10px",
+                  outline: "none",
+                  cursor: "pointer",
+                }}
               >
                 {(() => {
                   const opts: string[] = [];
@@ -846,7 +901,20 @@ export default function ReportsCenter() {
                 }
                 setBoardGenerating(false);
               }}
-              className="flex items-center justify-center gap-2 px-4 md:px-6 py-2.5 md:py-3 rounded-xl bg-white text-[#1e3a8a] text-[11px] md:text-xs font-black hover:bg-blue-50 transition-all disabled:opacity-50 shadow-lg whitespace-nowrap"
+              className="flex items-center justify-center gap-2 whitespace-nowrap"
+              style={{
+                padding: isMobile ? "11px 18px" : "13px 24px",
+                borderRadius: 14,
+                background: "#fff",
+                color: "#001A4D",
+                fontSize: isMobile ? 12 : 13,
+                fontWeight: 800,
+                border: "none",
+                cursor: boardGenerating ? "not-allowed" : "pointer",
+                boxShadow: "0 6px 18px rgba(0,0,0,0.20), 0 2px 6px rgba(0,0,0,0.12)",
+                opacity: boardGenerating ? 0.7 : 1,
+                fontFamily: "inherit",
+              }}
             >
               {boardGenerating ? (
                 <Loader2 className="w-4 h-4 animate-spin" />

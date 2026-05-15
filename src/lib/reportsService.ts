@@ -289,13 +289,18 @@ export async function fetchReportsDashboard(): Promise<ReportsDashboardData> {
     };
   });
 
-  // Base 12 report types always available
-  const baseReportCount = 12;
-  const totalGenerated = (reportsSnap.docs as any[]).length;
+  // The headline "Available reports" is a count of REPORT TYPES the owner can
+  // generate (the entries in REPORT_REGISTRY), NOT the historical count of
+  // generated documents. Previously we added `totalGenerated` to the base
+  // count which made "52" appear in the header even though only 12 report
+  // types exist — confusingly conflating "templates available" with "reports
+  // saved". Drop the historical adder; the registry IS the source of truth.
+  const totalReports = Object.keys(REPORT_REGISTRY).length;
+  void reportsSnap; // historical generation count no longer surfaced here
 
   return {
     stats: {
-      totalReports: Math.max(baseReportCount, totalGenerated + baseReportCount),
+      totalReports,
       totalCategories: 3,
       scheduled: scheduled.length,
       recentDownloads: recentDls,
