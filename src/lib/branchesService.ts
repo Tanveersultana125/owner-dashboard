@@ -118,6 +118,7 @@ export type BranchDetailData = {
   schoolAvgAhi: number;
   schoolAvgAttendance: number;
   schoolAvgPassRate: number;
+  schoolAvgFeeCollection: number;
   /** `score` is null for months with no attendance recorded — chart will gap. */
   historicalTrend: { period: string; score: number | null; schoolAvg: number }[];
   benchmarkComparison: { metric: string; branch: number; avg: number }[];
@@ -615,7 +616,7 @@ export async function fetchBranchDetail(branchId: string): Promise<BranchDetailD
   }
 
   return {
-    summary, schoolAvgAhi, schoolAvgAttendance, schoolAvgPassRate,
+    summary, schoolAvgAhi, schoolAvgAttendance, schoolAvgPassRate, schoolAvgFeeCollection,
     historicalTrend, benchmarkComparison, strengths, improvements, actionPlan,
     kpiNotes, bestBranchName,
   };

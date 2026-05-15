@@ -9,6 +9,7 @@ import {
   Plus, Pencil, Trash2, X, Save,
   BarChart3, CircleDollarSign, GraduationCap, CalendarCheck2,
   Sparkles, FileText, Activity, TrendingUp,
+  Lightbulb, ListChecks, Award, Target,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,6 +27,9 @@ import {
   WinnerCallout, BranchSummary,
 } from "@/lib/branchesService";
 import { buildReport, openReportWindow, type ReportSection } from "@/lib/reportTemplate";
+import {
+  fetchBranchWeeklyInsight, type BranchWeeklyInsight,
+} from "@/lib/branchWeeklyInsights";
 import { Trophy, Crown } from "lucide-react";
 import { auth, db } from "@/lib/firebase";
 import {
@@ -754,6 +758,11 @@ export default function BranchesComparison() {
   const [listData,   setListData]   = useState<BranchComparisonData | null>(null);
   const [detailData, setDetailData] = useState<BranchDetailData | null>(null);
   const [loading,    setLoading]    = useState(true);
+  // AI weekly insight — populated on Branch Detail mount. Held separately
+  // from detailData because it's async + cached weekly, while detailData is
+  // a live Firestore subscription that re-fires on every aggregation change.
+  const [weeklyInsight, setWeeklyInsight] = useState<BranchWeeklyInsight | null>(null);
+  const [weeklyLoading, setWeeklyLoading] = useState(false);
 
   // ── CRUD state ─────────────────────────────────────────────────────────
   const [addOpen,    setAddOpen]    = useState(false);
@@ -947,6 +956,7 @@ export default function BranchesComparison() {
     setLoading(true);
     setListData(null);
     setDetailData(null);
+    setWeeklyInsight(null);
 
     if (id) {
       const unsub = subscribeBranchDetail(
@@ -963,6 +973,45 @@ export default function BranchesComparison() {
       return unsub;
     }
   }, [id]);
+
+  // ── Weekly AI Insight fetch — runs once per branch view per week, then
+  // cached in Firestore so subsequent opens are instant. Updates the local
+  // state independently of detailData so the historical chart + KPI tiles
+  // stay live while AI text is async.
+  useEffect(() => {
+    if (!id || !detailData) {
+      setWeeklyInsight(null);
+      return;
+    }
+    let cancelled = false;
+    setWeeklyLoading(true);
+    fetchBranchWeeklyInsight(
+      {
+        branchId: id,
+        name: detailData.summary.name,
+        ahi: detailData.summary.ahi,
+        attendance: detailData.summary.attendance,
+        passRate: detailData.summary.passRate,
+        feeCollection: detailData.summary.feeCollection,
+        growthRate: detailData.summary.growthRate,
+        studentCount: detailData.summary.studentCount,
+        teacherCount: detailData.summary.teacherCount,
+        activeAlerts: detailData.summary.activeAlerts,
+        historicalTrend: detailData.historicalTrend,
+      },
+      {
+        avgAhi:           detailData.schoolAvgAhi,
+        avgAttendance:    detailData.schoolAvgAttendance,
+        avgPassRate:      detailData.schoolAvgPassRate,
+        avgFeeCollection: detailData.schoolAvgFeeCollection,
+      },
+    ).then(insight => {
+      if (!cancelled) setWeeklyInsight(insight);
+    }).finally(() => {
+      if (!cancelled) setWeeklyLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [id, detailData]);
 
 
   // ── Loading state ─────────────────────────────────────────────────────────
@@ -1226,6 +1275,172 @@ export default function BranchesComparison() {
               </div>
             </div>
             )}
+
+            {/* ── AI Weekly Insights — generated from the branch's CURRENT
+                metrics + 8-week trend, then cached for a calendar week.
+                Four sections: Reasons, Suggestions, Strengths, Areas of
+                Improvement. Cache miss → AI fires once → all subsequent
+                opens this week read from Firestore. Falls back to a
+                deterministic rule-based generator if AI is unavailable. */}
+            <div className="mt-6 md:mt-8 mb-8 md:mb-10">
+              <div className="flex items-center justify-between mb-4 md:mb-6">
+                <div className="flex items-center gap-3">
+                  <div style={{
+                    width: 38, height: 38, borderRadius: 12,
+                    background: "linear-gradient(135deg, #6B21E8, #A87FF8)",
+                    boxShadow: "0 3px 12px rgba(107,33,232,0.28)",
+                    display: "flex", alignItems: "center", justifyContent: "center", color: "#fff",
+                  }}>
+                    <Sparkles size={20} strokeWidth={2.3} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm md:text-base font-bold text-[#111827]">AI Weekly Insights</h3>
+                    <p className="text-[11px] md:text-xs text-slate-500 mt-0.5">
+                      Reasons, strengths, areas of improvement & suggestions — generated weekly from this branch's live data
+                      {weeklyInsight?.source === "ai" && " · fresh"}
+                      {weeklyInsight?.source === "cache" && " · cached this week"}
+                      {weeklyInsight?.source === "fallback" && " · rule-based"}
+                    </p>
+                  </div>
+                </div>
+                {weeklyLoading && !weeklyInsight && (
+                  <Loader2 className="w-4 h-4 animate-spin text-violet-500" />
+                )}
+              </div>
+
+              {!weeklyInsight ? (
+                <div className="rounded-2xl border border-dashed border-violet-200 bg-violet-50/40 px-6 py-10 text-center">
+                  {weeklyLoading ? (
+                    <>
+                      <Loader2 className="w-6 h-6 animate-spin text-violet-500 mx-auto mb-3" />
+                      <p className="text-xs text-violet-600 font-semibold">Reading this week's metrics…</p>
+                    </>
+                  ) : (
+                    <p className="text-xs text-slate-500 font-semibold">Insight will appear once the branch has measurable data this week.</p>
+                  )}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
+
+                  {/* Trend Reasons */}
+                  <div className="rounded-2xl border border-blue-100 bg-[#F3F8FF]/60 p-4 md:p-6">
+                    <div className="flex items-center gap-2.5 mb-3 md:mb-4">
+                      <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+                        style={{ background: "linear-gradient(135deg,#0055FF,#1166FF)", color: "#fff" }}>
+                        <TrendingUp className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-[12.5px] md:text-[13.5px] font-extrabold text-[#001A4D] tracking-tight">Reasons behind the trend</div>
+                        <div className="text-[10px] md:text-[11px] text-slate-500 font-semibold">Why this week looks the way it does</div>
+                      </div>
+                    </div>
+                    {weeklyInsight.trendReasons.length === 0 ? (
+                      <p className="text-[12px] text-slate-400 italic">No trend signal yet.</p>
+                    ) : (
+                      <ul className="space-y-2.5 md:space-y-3">
+                        {weeklyInsight.trendReasons.map((r, i) => (
+                          <li key={i} className="flex items-start gap-2.5">
+                            <div className="w-1.5 h-1.5 rounded-full bg-[#0055FF] flex-shrink-0 mt-[7px]" />
+                            <div className="min-w-0">
+                              <div className="text-[12.5px] md:text-[13px] font-bold text-[#001A4D]">{r.headline}</div>
+                              <div className="text-[11px] md:text-[12px] text-slate-600 leading-relaxed mt-0.5">{r.detail}</div>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+
+                  {/* Suggestions */}
+                  <div className="rounded-2xl border border-violet-100 bg-violet-50/40 p-4 md:p-6">
+                    <div className="flex items-center gap-2.5 mb-3 md:mb-4">
+                      <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+                        style={{ background: "linear-gradient(135deg,#6B21E8,#A87FF8)", color: "#fff" }}>
+                        <Lightbulb className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-[12.5px] md:text-[13.5px] font-extrabold text-[#3B1B7C] tracking-tight">Suggestions</div>
+                        <div className="text-[10px] md:text-[11px] text-slate-500 font-semibold">Concrete next steps for this week</div>
+                      </div>
+                    </div>
+                    {weeklyInsight.suggestions.length === 0 ? (
+                      <p className="text-[12px] text-slate-400 italic">No suggestions queued.</p>
+                    ) : (
+                      <ul className="space-y-2.5 md:space-y-3">
+                        {weeklyInsight.suggestions.map((s, i) => (
+                          <li key={i} className="flex items-start gap-2.5">
+                            <ListChecks className="w-3.5 h-3.5 text-violet-500 flex-shrink-0 mt-1" />
+                            <div className="min-w-0">
+                              <div className="text-[12.5px] md:text-[13px] font-bold text-[#3B1B7C]">{s.headline}</div>
+                              <div className="text-[11px] md:text-[12px] text-slate-600 leading-relaxed mt-0.5">{s.detail}</div>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+
+                  {/* Strengths */}
+                  <div className="rounded-2xl border border-emerald-100 bg-emerald-50/40 p-4 md:p-6">
+                    <div className="flex items-center gap-2.5 mb-3 md:mb-4">
+                      <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+                        style={{ background: "linear-gradient(135deg,#10B981,#34D399)", color: "#fff" }}>
+                        <Award className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-[12.5px] md:text-[13.5px] font-extrabold text-[#064E3B] tracking-tight">Strengths</div>
+                        <div className="text-[10px] md:text-[11px] text-slate-500 font-semibold">Where this branch is leading</div>
+                      </div>
+                    </div>
+                    {weeklyInsight.strengths.length === 0 ? (
+                      <p className="text-[12px] text-slate-400 italic">No strengths surfaced yet.</p>
+                    ) : (
+                      <ul className="space-y-2.5 md:space-y-3">
+                        {weeklyInsight.strengths.map((st, i) => (
+                          <li key={i} className="flex items-start gap-2.5">
+                            <CheckCircle className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0 mt-1" />
+                            <div className="min-w-0">
+                              <div className="text-[12.5px] md:text-[13px] font-bold text-[#064E3B]">{st.headline}</div>
+                              <div className="text-[11px] md:text-[12px] text-slate-600 leading-relaxed mt-0.5">{st.detail}</div>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+
+                  {/* Areas of Improvement */}
+                  <div className="rounded-2xl border border-amber-100 bg-amber-50/40 p-4 md:p-6">
+                    <div className="flex items-center gap-2.5 mb-3 md:mb-4">
+                      <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+                        style={{ background: "linear-gradient(135deg,#F59E0B,#FBBF24)", color: "#fff" }}>
+                        <Target className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-[12.5px] md:text-[13.5px] font-extrabold text-[#78350F] tracking-tight">Areas of improvement</div>
+                        <div className="text-[10px] md:text-[11px] text-slate-500 font-semibold">Where to focus next</div>
+                      </div>
+                    </div>
+                    {weeklyInsight.areasOfImprovement.length === 0 ? (
+                      <p className="text-[12px] text-slate-400 italic">No improvement gaps detected.</p>
+                    ) : (
+                      <ul className="space-y-2.5 md:space-y-3">
+                        {weeklyInsight.areasOfImprovement.map((a, i) => (
+                          <li key={i} className="flex items-start gap-2.5">
+                            <AlertTriangle className="w-3.5 h-3.5 text-amber-500 flex-shrink-0 mt-1" />
+                            <div className="min-w-0">
+                              <div className="text-[12.5px] md:text-[13px] font-bold text-[#78350F]">{a.headline}</div>
+                              <div className="text-[11px] md:text-[12px] text-slate-600 leading-relaxed mt-0.5">{a.detail}</div>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+
+                </div>
+              )}
+            </div>
 
             {/* Strengths & Improvements */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
