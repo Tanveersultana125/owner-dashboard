@@ -25,6 +25,12 @@ export default function RisksAlerts() {
   const isMobile = useIsMobile();
   const pageShellStyle = usePageShellStyle();
   const [selectedBranchId, setSelectedBranchId] = useState<string>("all");
+  // Severity drill-down filter. Clicking a stat tile (Active Alerts /
+  // Critical / Warnings / Resolved) toggles this filter — clicking the same
+  // tile a second time clears it. Single-source-of-truth pattern: this one
+  // string drives both card-highlighting AND list-filtering below.
+  type SeverityFilter = "all" | "critical" | "warning" | "resolved";
+  const [severityFilter, setSeverityFilter] = useState<SeverityFilter>("all");
   const [branches, setBranches] = useState<{id: string, name: string}[]>([]);
   const [data, setData] = useState<RisksData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -38,11 +44,35 @@ export default function RisksAlerts() {
       if (!uid) return;
       try {
         const branchesSnap = await getDocs(collection(db, "schools", uid, "branches"));
-        const bList = branchesSnap.docs.map(d => ({
-          id: d.data().branchId || d.id,
-          name: d.data().name || d.data().schoolName || "Branch",
-        }));
-        setBranches(bList);
+        // Dedup by normalized (name + id) — Firestore can carry duplicate
+        // branch docs if the owner accidentally re-created a branch with
+        // the same name, OR if a cascade write created a parallel doc.
+        // Dropdown was showing the same name twice; this collapses them.
+        // Time: O(n) where n = branches count (typically < 20).
+        const seen = new Set<string>();
+        const bList = branchesSnap.docs
+          .map(d => ({
+            id: (d.data().branchId || d.id) as string,
+            name: (d.data().name || d.data().schoolName || "Branch") as string,
+          }))
+          .filter(b => {
+            // Composite dedup key — case-insensitive name + id. Two docs
+            // with the same name AND id collapse into one; same name but
+            // different ids remain (legitimately distinct branches).
+            const key = `${b.name.trim().toLowerCase()}::${b.id}`;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          });
+        // Second-pass dedup by name only — handles the case where the
+        // SAME branch was created twice with different auto-ids but same
+        // human-readable name (most common user-reported duplicate cause).
+        const byName = new Map<string, { id: string; name: string }>();
+        bList.forEach(b => {
+          const nameKey = b.name.trim().toLowerCase();
+          if (!byName.has(nameKey)) byName.set(nameKey, b);
+        });
+        setBranches(Array.from(byName.values()));
       } catch (err) {
         /* Without this catch, a permission/network failure leaves branches []
            silently — dropdown only shows "All Branches" with no diagnostic. */
@@ -227,21 +257,57 @@ export default function RisksAlerts() {
         {/* Bright Stat Grid */}
         <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: isMobile ? 10 : 16 }}>
           {activeData.stats.map((stat, i) => {
-            const isAlert = stat.label.toLowerCase().includes("critical") || stat.label.toLowerCase().includes("alert");
-            const isWarn = stat.label.toLowerCase().includes("warning");
-            const isGood = stat.label.toLowerCase().includes("resolved");
+            const labelLower = stat.label.toLowerCase();
+            // Map this stat tile to a severity filter value. The "Active
+            // Alerts" tile is the umbrella → maps to "all" (clears filter).
+            // The other three drill into a specific severity.
+            const isAlert = labelLower.includes("critical");
+            const isActive = labelLower.includes("active");
+            const isWarn = labelLower.includes("warning");
+            const isGood = labelLower.includes("resolved");
+            const filterKey: SeverityFilter =
+              isAlert ? "critical"
+              : isWarn ? "warning"
+              : isGood ? "resolved"
+              : "all"; // Active Alerts = all
             const grad = isAlert ? GRAD_RED : isWarn ? GRAD_GOLD : isGood ? GRAD_GREEN : GRAD_BLUE;
             const iconMap = isAlert ? AlertTriangle : isWarn ? ShieldAlert : isGood ? CheckCircle2 : Activity;
+            const isActiveFilter = severityFilter === filterKey && filterKey !== "all";
+            const outlineColor = isAlert ? RED : isWarn ? GOLD : isGood ? GREEN : B1;
+            const handleTileClick = () => {
+              if (filterKey === "all") {
+                setSeverityFilter("all");
+              } else if (severityFilter === filterKey) {
+                setSeverityFilter("all"); // toggle off
+              } else {
+                setSeverityFilter(filterKey);
+              }
+              setTimeout(() => {
+                document.getElementById("risks-alerts-list")?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }, 50);
+            };
             return (
-              <StatTile
+              // Wrapper div carries the active-filter visual signal because
+              // StatTile doesn't expose a `style` prop. Border ring + ring
+              // offset matches the standard click-affordance.
+              <div
                 key={i}
-                label={stat.label}
-                value={stat.value as any}
-                sub={stat.change}
-                grad={grad}
-                icon={iconMap}
-                onClick={() => navigate("/risks")}
-              />
+                style={{
+                  borderRadius: isMobile ? 18 : 24,
+                  padding: 2,
+                  background: isActiveFilter ? outlineColor : "transparent",
+                  transition: "background 160ms ease",
+                }}
+              >
+                <StatTile
+                  label={stat.label}
+                  value={stat.value as any}
+                  sub={isActiveFilter ? `✓ Showing only ${filterKey}` : stat.change}
+                  grad={grad}
+                  icon={iconMap}
+                  onClick={handleTileClick}
+                />
+              </div>
             );
           })}
         </div>
@@ -353,34 +419,80 @@ export default function RisksAlerts() {
 
         {/* Active Alerts List */}
         <div
+          id="risks-alerts-list"
           style={{
             background:"#fff", borderRadius: isMobile ? 16 : 22, padding: isMobile ? "16px 14px" : "22px 26px",
             boxShadow:SHADOW_SM, border:"0.5px solid rgba(0,85,255,.08)",
           }}
         >
-          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom: isMobile ? 14 : 18 }}>
-            <div style={{ display:"flex", alignItems:"center", gap: isMobile ? 10 : 12, minWidth:0 }}>
-              <div style={{ width: isMobile ? 32 : 36, height: isMobile ? 32 : 36, borderRadius:11, background:GRAD_PRIMARY, display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 6px 14px rgba(0,85,255,.28)", flexShrink:0 }}>
-                <AlertOctagon size={isMobile ? 16 : 18} color="#fff" strokeWidth={2.3}/>
-              </div>
-              <div style={{ minWidth:0 }}>
-                <h3 style={{ fontSize: isMobile ? 14 : 15, fontWeight:700, color:T1, margin:0, letterSpacing:"-0.3px" }}>Active Alerts</h3>
-                <p style={{ fontSize: isMobile ? 9 : 10, fontWeight:600, color:T4, margin:"3px 0 0 0", letterSpacing:"0.08em", textTransform:"uppercase" }}>{totalAlerts} total</p>
-              </div>
-            </div>
-          </div>
+          {/* Apply severity filter from the clicked stat tile.
+              Note: AlertItem.type uses "critical" | "warning" | other; we
+              treat "resolved" as alerts whose status field signals resolved.
+              Single source of truth for the visible alert set so the count
+              chip + heading match the rendered list exactly. */}
+          {(() => {
+            const baseList = activeData.alerts.filter(a => a.id !== "no-alerts");
+            const filteredList = severityFilter === "all"
+              ? baseList
+              : severityFilter === "resolved"
+                ? baseList.filter(a => /resolv/i.test(String(a.status || "")))
+                : baseList.filter(a => a.type === severityFilter);
+            const filterLabel = severityFilter === "all" ? "All severities"
+              : severityFilter === "critical" ? "Critical only"
+              : severityFilter === "warning" ? "Warnings only"
+              : "Resolved only";
+            return (
+              <>
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom: isMobile ? 14 : 18, gap: 10, flexWrap: "wrap" }}>
+                  <div style={{ display:"flex", alignItems:"center", gap: isMobile ? 10 : 12, minWidth:0 }}>
+                    <div style={{ width: isMobile ? 32 : 36, height: isMobile ? 32 : 36, borderRadius:11, background:GRAD_PRIMARY, display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 6px 14px rgba(0,85,255,.28)", flexShrink:0 }}>
+                      <AlertOctagon size={isMobile ? 16 : 18} color="#fff" strokeWidth={2.3}/>
+                    </div>
+                    <div style={{ minWidth:0 }}>
+                      <h3 style={{ fontSize: isMobile ? 14 : 15, fontWeight:700, color:T1, margin:0, letterSpacing:"-0.3px" }}>
+                        Active Alerts
+                      </h3>
+                      <p style={{ fontSize: isMobile ? 9 : 10, fontWeight:600, color:T4, margin:"3px 0 0 0", letterSpacing:"0.08em", textTransform:"uppercase" }}>
+                        {filteredList.length} of {totalAlerts} · {filterLabel}
+                      </p>
+                    </div>
+                  </div>
+                  {severityFilter !== "all" && (
+                    <button
+                      type="button"
+                      onClick={() => setSeverityFilter("all")}
+                      style={{
+                        padding: "7px 14px", borderRadius: 999,
+                        background: "rgba(0,85,255,0.08)",
+                        color: B1, fontSize: 11, fontWeight: 700, letterSpacing: "0.04em",
+                        border: "0.5px solid rgba(0,85,255,0.20)",
+                        cursor: "pointer", fontFamily: "inherit",
+                      }}
+                    >
+                      Clear filter ×
+                    </button>
+                  )}
+                </div>
 
-          {activeData.alerts.length === 0 || (activeData.alerts.length === 1 && activeData.alerts[0].id === "no-alerts") ? (
-            <div style={{ padding: isMobile ? "36px 0" : "48px 0", display:"flex", flexDirection:"column", alignItems:"center", gap: isMobile ? 10 : 12 }}>
-              <div style={{ width: isMobile ? 56 : 68, height: isMobile ? 56 : 68, borderRadius: isMobile ? 16 : 20, background:"rgba(0,200,83,.12)", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                <CheckCircle2 size={isMobile ? 28 : 34} color={GREEN} strokeWidth={2.2}/>
-              </div>
-              <p style={{ fontSize: isMobile ? 12 : 13, fontWeight:800, color:GREEN, margin:0, letterSpacing:"0.04em", textAlign:"center" }}>Great! No active alerts found</p>
-              <p style={{ fontSize: isMobile ? 10 : 11, fontWeight:500, color:T4, margin:0, textAlign:"center", padding:"0 12px" }}>All systems healthy across branches</p>
-            </div>
-          ) : (
-            <div style={{ display:"flex", flexDirection:"column", gap: isMobile ? 10 : 12 }}>
-              {activeData.alerts.filter(a => a.id !== "no-alerts").map(alert => {
+                {baseList.length === 0 ? (
+                  <div style={{ padding: isMobile ? "36px 0" : "48px 0", display:"flex", flexDirection:"column", alignItems:"center", gap: isMobile ? 10 : 12 }}>
+                    <div style={{ width: isMobile ? 56 : 68, height: isMobile ? 56 : 68, borderRadius: isMobile ? 16 : 20, background:"rgba(0,200,83,.12)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                      <CheckCircle2 size={isMobile ? 28 : 34} color={GREEN} strokeWidth={2.2}/>
+                    </div>
+                    <p style={{ fontSize: isMobile ? 12 : 13, fontWeight:800, color:GREEN, margin:0, letterSpacing:"0.04em", textAlign:"center" }}>Great! No active alerts found</p>
+                    <p style={{ fontSize: isMobile ? 10 : 11, fontWeight:500, color:T4, margin:0, textAlign:"center", padding:"0 12px" }}>All systems healthy across branches</p>
+                  </div>
+                ) : filteredList.length === 0 ? (
+                  <div style={{ padding: isMobile ? "30px 12px" : "40px 16px", display:"flex", flexDirection:"column", alignItems:"center", gap: 8, textAlign: "center" }}>
+                    <div style={{ width: 48, height: 48, borderRadius: 14, background: "rgba(0,85,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <Filter size={20} color={B1} strokeWidth={2.2}/>
+                    </div>
+                    <p style={{ fontSize: 12, fontWeight: 700, color: T1, margin: 0 }}>No {severityFilter} alerts to show</p>
+                    <p style={{ fontSize: 11, color: T4, margin: 0 }}>Tap a different stat tile above or clear the filter.</p>
+                  </div>
+                ) : (
+                  <div style={{ display:"flex", flexDirection:"column", gap: isMobile ? 10 : 12 }}>
+                    {filteredList.map(alert => {
                 const Icon = getAlertIcon(alert);
                 const accentGrad = alert.type === "critical" ? GRAD_RED : alert.type === "warning" ? GRAD_GOLD : GRAD_BLUE;
                 const accentColor = alert.type === "critical" ? RED : alert.type === "warning" ? GOLD : B1;
@@ -487,8 +599,11 @@ export default function RisksAlerts() {
                   </div>
                 );
               })}
-            </div>
-          )}
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </div>
 
         <AIInsightCard
