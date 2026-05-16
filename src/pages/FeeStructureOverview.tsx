@@ -78,6 +78,7 @@ export default function FeeStructureOverview() {
   const [branchFilter, setBranchFilter] = useState<string>("All");
   const [defaulterBranchFilter, setDefaulterBranchFilter] = useState<string>("All");
   const [viewMode, setViewMode]       = useState<"table" | "chart">("table");
+  const [activeBarKey, setActiveBarKey] = useState<string | null>(null);
   const [principals, setPrincipals]   = useState<{ id: string; email: string; name: string; branchId: string; branchName?: string }[]>([]);
   const [notifyState, setNotifyState] = useState<{
     mode: "single" | "bulk";
@@ -833,11 +834,49 @@ export default function FeeStructureOverview() {
                       <XAxis dataKey="branch" tick={{ fill: "#64748b", fontSize: isMobile ? 9 : 11, fontWeight: 600 }} interval={0} angle={isMobile ? -20 : 0} textAnchor={isMobile ? "end" : "middle"} height={isMobile ? 50 : 30} />
                       <YAxis tick={{ fill: "#94a3b8", fontSize: isMobile ? 9 : 11 }}
                         tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v} />
-                      <Tooltip contentStyle={{ borderRadius: "12px", border: "none", boxShadow: "0 10px 15px rgba(0,0,0,0.1)", fontSize: isMobile ? 11 : 12 }}
-                        formatter={(v: any) => [`₹ ${currency(v)}`, ""]} />
+                      <Tooltip
+                        cursor={false}
+                        content={({ active, payload, label }) => {
+                          if (!active || !payload || payload.length === 0 || !activeBarKey) return null;
+                          const entry = payload.find((p: any) => p.dataKey === activeBarKey);
+                          if (!entry) return null;
+                          const value = Number(entry.value || 0);
+                          return (
+                            <div style={{
+                              background: "#ffffff",
+                              borderRadius: 12,
+                              boxShadow: "0 10px 15px rgba(0,0,0,0.1)",
+                              padding: "8px 12px",
+                              fontSize: isMobile ? 11 : 12,
+                              fontWeight: 700,
+                              color: "#1e294b",
+                            }}>
+                              <div style={{ fontWeight: 800, marginBottom: 2 }}>{String(label)}</div>
+                              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                <span style={{
+                                  display: "inline-block",
+                                  width: 10,
+                                  height: 10,
+                                  borderRadius: 2,
+                                  background: (entry as any).color || (entry as any).fill || "#1e3a8a",
+                                }} />
+                                <span style={{ fontWeight: 600, color: "#64748b" }}>{String(entry.dataKey)}:</span>
+                                <span style={{ fontWeight: 800 }}>{`₹ ${currency(value)}`}</span>
+                              </div>
+                            </div>
+                          );
+                        }}
+                      />
                       <Legend wrapperStyle={{ fontSize: isMobile ? "9px" : "10px", fontWeight: 700, paddingTop: "8px" }} />
                       {allTerms.map((t, i) => (
-                        <Bar key={t} dataKey={t} fill={chartColors[i % chartColors.length]} radius={[4,4,0,0]} />
+                        <Bar
+                          key={t}
+                          dataKey={t}
+                          fill={chartColors[i % chartColors.length]}
+                          radius={[4,4,0,0]}
+                          onMouseEnter={() => setActiveBarKey(t)}
+                          onMouseLeave={() => setActiveBarKey(null)}
+                        />
                       ))}
                     </BarChart>
                   </ResponsiveContainer>
