@@ -7,6 +7,8 @@ import { db, auth } from "@/lib/firebase";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { tilt3D, tilt3DStyle } from "@/lib/use3DTilt";
 import { SubjectMasteryRadar } from "@/components/SubjectMasteryRadar";
+import { dedupAttendanceByDay } from "@/lib/attendanceDedup";
+import { subscribeSchoolHolidays, buildHolidayMap, type SchoolHoliday } from "@/lib/schoolHolidays";
 import { toast } from "sonner";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
@@ -150,6 +152,7 @@ const StudentProfile = () => {
   const [loading, setLoading] = useState(true);
   const [student, setStudent] = useState<any>(null);
   const [attendance, setAttendance] = useState<any[]>([]);
+  const [schoolHolidays, setSchoolHolidays] = useState<SchoolHoliday[]>([]);
   const [testScores, setTestScores] = useState<any[]>([]);
   const [assignments, setAssignments] = useState<any[]>([]);
   const [submissions, setSubmissions] = useState<any[]>([]);
@@ -336,11 +339,33 @@ const StudentProfile = () => {
     run();
   }, [studentId]);
 
+  // School-wide holidays — principal-declared, excluded from %.
+  useEffect(() => {
+    const schoolId = auth.currentUser?.uid;
+    if (!schoolId) return;
+    const unsub = subscribeSchoolHolidays(
+      schoolId,
+      (rows) => setSchoolHolidays(rows),
+      (err) => console.error("[owner/StudentProfile] school_holidays:", err),
+    );
+    return () => unsub();
+  }, []);
+
+  const holidayMap = useMemo(() => buildHolidayMap(schoolHolidays), [schoolHolidays]);
+
   // ── Metrics ────────────────────────────────────────────────────────────────
   const m = useMemo(() => {
-    const tot = attendance.length;
-    const pres = attendance.filter(r => r.status === "present").length;
-    const late = attendance.filter(r => r.status === "late").length;
+    // Dedup multi-class records (holiday wins → closes the loophole where a
+    // class teacher's Holiday is overwritten by a subject teacher's present
+    // mark same day). Then exclude per-student holiday status AND school-wide
+    // holiday dates from %.
+    const attDeduped = dedupAttendanceByDay(attendance as any[]);
+    const attCountable = attDeduped
+      .filter(r => r.status !== "holiday")
+      .filter(r => !holidayMap.has(String(r.date || "")));
+    const tot = attCountable.length;
+    const pres = attCountable.filter(r => r.status === "present").length;
+    const late = attCountable.filter(r => r.status === "late").length;
     const abs = tot - pres - late;
     const attRate = tot > 0 ? ((pres + late) / tot) * 100 : 0;
 
@@ -377,7 +402,7 @@ const StudentProfile = () => {
     const now = new Date();
     const monthly = Array.from({ length: 6 }, (_, i) => {
       const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
-      const mAtt = attendance.filter(r => { const dt = toDate(r.date); return dt && dt.getMonth() === d.getMonth() && dt.getFullYear() === d.getFullYear(); });
+      const mAtt = attendance.filter(r => { const dt = toDate(r.date); return dt && dt.getMonth() === d.getMonth() && dt.getFullYear() === d.getFullYear() && r.status !== "holiday" && !holidayMap.has(String(r.date || "")); });
       const mSc = testScores.filter(t => { const dt = toDate(t.timestamp || t.createdAt); return dt && dt.getMonth() === d.getMonth() && dt.getFullYear() === d.getFullYear(); });
       const mP = mAtt.filter(r => r.status === "present" || r.status === "late").length;
       const attP = mAtt.length > 0 ? (mP / mAtt.length) * 100 : 0;
@@ -392,7 +417,7 @@ const StudentProfile = () => {
     const days = new Set(attendance.map(a => toDate(a.date)?.toDateString())).size;
 
     return { tot, pres, late, abs, attRate, avg, subScores, trend, monthly, subCount, asgCount, completion, days };
-  }, [attendance, testScores, submissions, assignments]);
+  }, [attendance, testScores, submissions, assignments, holidayMap]);
 
   /* Risk score — only count dimensions that actually have data. Previously
      a brand-new student with 100% attendance but no tests/assignments yet
@@ -427,12 +452,20 @@ const StudentProfile = () => {
      UTC and showed up on the wrong calendar cell. `toLocaleDateString("en-CA")`
      produces local YYYY-MM-DD — matches the format MarkAttendance writers use. */
   const localDateStr = (d: Date) => d.toLocaleDateString("en-CA");
+  // Dedup multi-class records so the calendar reflects the canonical day-
+  // status (holiday wins over present/absent/late). School-wide holidays
+  // (principal-declared) trump per-student status — consistent across
+  // dashboards.
+  const attendanceDeduped = dedupAttendanceByDay(attendance as any[]);
   const calDays = Array.from({ length: 42 }, (_, i) => {
     const dayNum = i - firstDay + 1;
     if (dayNum < 1 || dayNum > daysInMonth) return null;
     const d = new Date(calYear, calMon, dayNum);
     const dateStr = localDateStr(d);
-    const rec = attendance.find(a => {
+    if (holidayMap.has(dateStr)) {
+      return { dayNum, date: d, status: "holiday" };
+    }
+    const rec = attendanceDeduped.find(a => {
       const ad = toDate(a.date);
       return ad && localDateStr(ad) === dateStr;
     });
@@ -843,7 +876,12 @@ const StudentProfile = () => {
             {calDays.map((d, i) => {
               if (!d) return <div key={i} />;
               const isToday = d.date.toDateString() === today.toDateString();
-              const bg = d.status === "present" ? T.grn : d.status === "late" ? T.amb : d.status === "absent" ? T.red : "transparent";
+              const bg =
+                d.status === "present" ? T.grn :
+                d.status === "late" ? T.amb :
+                d.status === "absent" ? T.red :
+                d.status === "holiday" ? "#7B3FF4" :
+                "transparent";
               const isWknd = d.date.getDay() === 0 || d.date.getDay() === 6;
               return (
                 <div key={i} style={{
@@ -859,7 +897,7 @@ const StudentProfile = () => {
             })}
           </div>
           <div style={{ display: "flex", gap: 14, marginTop: 12, justifyContent: "center" }}>
-            {[{ c: T.grn, l: "Present" }, { c: T.amb, l: "Late" }, { c: T.red, l: "Absent" }, { c: T.s2, l: "Weekend" }, { c: "transparent", l: "No Data" }].map(x => (
+            {[{ c: T.grn, l: "Present" }, { c: T.amb, l: "Late" }, { c: T.red, l: "Absent" }, { c: "#7B3FF4", l: "Holiday" }, { c: T.s2, l: "Weekend" }, { c: "transparent", l: "No Data" }].map(x => (
               <div key={x.l} style={{ display: "flex", alignItems: "center", gap: 4 }}>
                 <div style={{ width: 8, height: 8, borderRadius: 2, background: x.c, border: x.c === "transparent" ? `1px solid ${T.s2}` : "none" }} />
                 <span style={{ fontSize: 10, color: T.ink3 }}>{x.l}</span>

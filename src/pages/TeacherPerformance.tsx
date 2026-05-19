@@ -175,10 +175,11 @@ export default function TeacherPerformance() {
           const data = d.data() as any;
           const tid  = data.teacherId || "";
           if (!tid) return;
+          const status = (data.status || "").toLowerCase();
+          if (status === "holiday") return; // exclude whole-class off-days
           if (!aMap.has(tid)) aMap.set(tid, { p: 0, t: 0 });
           const cur = aMap.get(tid)!;
           cur.t++;
-          const status = (data.status || "").toLowerCase();
           if (status === "present" || status === "late") cur.p++;
         });
         setAttMap(aMap);

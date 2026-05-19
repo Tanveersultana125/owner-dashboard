@@ -321,11 +321,12 @@ export async function fetchRisksOverview(selectedBranchId: string = "all"): Prom
 
     let level: 'critical' | 'warning' | 'info' | null = null;
 
-    // Attendance risk
-    if (sAtt.length > 3) {
-      const presentCount = sAtt.filter((r: any) => r.status === "present").length;
-      const attPct = (presentCount / sAtt.length) * 100;
-      bStats.attTotal   += sAtt.length;
+    // Attendance risk — exclude holiday docs (whole-class declared off-days).
+    const sAttCountable = sAtt.filter((r: any) => r.status !== "holiday");
+    if (sAttCountable.length > 3) {
+      const presentCount = sAttCountable.filter((r: any) => r.status === "present").length;
+      const attPct = (presentCount / sAttCountable.length) * 100;
+      bStats.attTotal   += sAttCountable.length;
       bStats.attPresent += presentCount;
       if (attPct < 80) bStats.lowAttCount++;
       if (attPct < thresholds.attendanceCritical)  level = 'critical';
