@@ -10,8 +10,8 @@ import { SubjectMasteryRadar } from "@/components/SubjectMasteryRadar";
 import { dedupAttendanceByDay } from "@/lib/attendanceDedup";
 import { subscribeSchoolHolidays, buildHolidayMap, type SchoolHoliday } from "@/lib/schoolHolidays";
 import { toast } from "sonner";
-import html2canvas from "html2canvas";
-import { jsPDF } from "jspdf";
+// html2canvas (~200KB) + jspdf (~250KB) are lazy-loaded inside the Export
+// PDF handler — only paid when the user actually clicks Export.
 
 // ── Tokens ───────────────────────────────────────────────────────────────────
 const T = {
@@ -503,6 +503,12 @@ const StudentProfile = () => {
     await new Promise(r => setTimeout(r, 250));
 
     try {
+      // Lazy-load heavy export libs here (saves ~450KB from initial bundle).
+      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+        import("html2canvas"),
+        import("jspdf"),
+      ]);
+
       const node = exportRef.current;
       const canvas = await html2canvas(node, {
         scale: 2,                  // retina-sharp

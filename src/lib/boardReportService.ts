@@ -14,8 +14,9 @@
  * Market note: School owners currently compile these manually.
  * One-click generation = 4–8 hours saved per quarter per owner.
  */
-import { jsPDF } from "jspdf";
-import autoTable from "jspdf-autotable";
+// Heavy libs (jspdf + autotable) are loaded via dynamic import() inside
+// generateBoardReportPDF() so they don't bloat the initial bundle.
+import type { jsPDF } from "jspdf";
 import { db, auth } from "./firebase";
 import {
   collection, getDocs, query, where, orderBy,
@@ -185,7 +186,11 @@ export async function generateBoardReportPDF({ schoolName, quarter, ownerName }:
   const warningAlerts  = risksSnap.docs.filter(d => (d.data() as any).severity === "warning").length;
 
   // ── Build PDF ──────────────────────────────────────────────────────────────
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  // Lazy-load jspdf + autotable here — saves ~250KB from initial bundle since
+  // this whole module only runs when the user clicks "Generate Board Report".
+  const { jsPDF: jsPDFCtor } = await import("jspdf");
+  const { default: autoTable } = await import("jspdf-autotable");
+  const doc = new jsPDFCtor({ orientation: "portrait", unit: "mm", format: "a4" });
 
   /* ════════════════════════════════════════════════════════════════════════
      COVER PAGE — Apple-premium minimal layout

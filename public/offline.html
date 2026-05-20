@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#1e3a8a" />
+  <title>Offline — Edullent</title>
+  <link rel="icon" type="image/png" href="/edullent-icon.png" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #001040 0%, #001A66 35%, #0044CC 70%, #0055FF 100%);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      -webkit-font-smoothing: antialiased;
+    }
+    .card {
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 0.5px solid rgba(255, 255, 255, 0.15);
+      border-radius: 24px;
+      padding: 48px 36px;
+      max-width: 440px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 24px 80px rgba(0, 8, 60, 0.4);
+    }
+    .icon {
+      width: 72px;
+      height: 72px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.18);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 24px;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+    }
+    .icon svg { width: 36px; height: 36px; }
+    h1 {
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 10px;
+    }
+    p {
+      font-size: 14px;
+      line-height: 1.6;
+      color: rgba(255, 255, 255, 0.82);
+      margin-bottom: 32px;
+    }
+    .button {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #fff;
+      color: #001040;
+      font-size: 14px;
+      font-weight: 700;
+      padding: 13px 24px;
+      border-radius: 12px;
+      border: none;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+    }
+    .button:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.24); }
+    .button:active { transform: translateY(0); }
+    .status {
+      margin-top: 20px;
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .status .dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: #ff3355;
+      animation: pulse 1.6s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .footer {
+      margin-top: 28px;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.4);
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="1" y1="1" x2="23" y2="23"></line>
+        <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"></path>
+        <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"></path>
+        <path d="M10.71 5.05A16 16 0 0 1 22.58 9"></path>
+        <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"></path>
+        <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+        <line x1="12" y1="20" x2="12.01" y2="20"></line>
+      </svg>
+    </div>
+    <h1>You're offline</h1>
+    <p>
+      Edullent needs an internet connection to load your school's latest data.
+      Pages you've already opened in this session will still work — try going
+      back, or reconnect to reload.
+    </p>
+    <button class="button" id="retry" type="button">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="23 4 23 10 17 10"></polyline>
+        <polyline points="1 20 1 14 7 14"></polyline>
+        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path>
+        <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"></path>
+      </svg>
+      Try again
+    </button>
+    <div class="status"><span class="dot"></span>No network detected</div>
+    <p class="footer">Edullent · Multi-branch school management</p>
+  </div>
+
+  <script>
+    // Re-attempt navigation when the user clicks retry OR the OS reports the
+    // network came back. Reload uses cache:reload semantics to force a fresh
+    // network request (otherwise we'd just re-render this offline page).
+    const retry = () => {
+      if (navigator.onLine) {
+        location.reload();
+      } else {
+        // Subtle shake feedback so the user knows we tried but the network is still down.
+        const btn = document.getElementById("retry");
+        btn.animate(
+          [
+            { transform: "translateX(0)" },
+            { transform: "translateX(-6px)" },
+            { transform: "translateX(6px)" },
+            { transform: "translateX(0)" },
+          ],
+          { duration: 280, easing: "ease-out" },
+        );
+      }
+    };
+    document.getElementById("retry").addEventListener("click", retry);
+    window.addEventListener("online", () => location.reload());
+  </script>
+</body>
+</html>

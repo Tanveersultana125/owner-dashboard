@@ -17,7 +17,7 @@ import {
 import { useIsMobile } from "@/hooks/use-mobile";
 import { tilt3D, tilt3DStyle, BLUE_SHADOW } from "@/lib/use3DTilt";
 import { toast } from "sonner";
-import * as XLSX from "xlsx";
+// xlsx is lazy-loaded inside the Excel export handler — saves ~600KB on initial load.
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend,
@@ -453,7 +453,8 @@ export default function FeeStructureOverview() {
   }, [filtered]);
 
   /* ── export combined Excel ─────────────────────────────── */
-  const exportCombined = () => {
+  const exportCombined = async () => {
+    const XLSX = await import("xlsx");
     const safe = (n: string) => (n || "Sheet").replace(/[\\/*?:[\]]/g, "_").slice(0, 31);
     const wb = XLSX.utils.book_new();
 

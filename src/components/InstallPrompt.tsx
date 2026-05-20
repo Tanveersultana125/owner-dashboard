@@ -3,6 +3,10 @@ import { Share, Plus, Download, X } from "lucide-react";
 
 const STORAGE_KEY = "edu_install_dismissed_at";
 const COOLDOWN_DAYS = 7;
+// Engagement gate — don't show the prompt until the user has actually
+// interacted with the app, so it doesn't feel spammy on first load.
+// (Either: any click/touch/keydown OR 15s of dwell time, whichever comes first.)
+const ENGAGEMENT_DWELL_MS = 15_000;
 
 type BIPEvent = Event & {
   prompt: () => Promise<void>;
@@ -48,12 +52,30 @@ export default function InstallPrompt() {
   const [bipEvent, setBipEvent] = useState<BIPEvent | null>(null);
   const [showIOSHint, setShowIOSHint] = useState(false);
   const [dismissed, setDismissed] = useState(false);
+  // Engagement gate — prompt only renders after the user has interacted.
+  const [engaged, setEngaged] = useState(false);
 
   useEffect(() => {
     if (isStandalone() || withinCooldown()) {
       setDismissed(true);
       return;
     }
+
+    // Engagement detection: any of these triggers "engaged":
+    //   - first pointer/keyboard event (real interaction)
+    //   - 15s passive dwell (probably reading the dashboard)
+    let engagementTimer: number | undefined;
+    const onEngagement = () => {
+      setEngaged(true);
+      if (engagementTimer !== undefined) window.clearTimeout(engagementTimer);
+      window.removeEventListener("pointerdown", onEngagement);
+      window.removeEventListener("keydown", onEngagement);
+      window.removeEventListener("scroll", onEngagement);
+    };
+    window.addEventListener("pointerdown", onEngagement, { once: true, passive: true });
+    window.addEventListener("keydown", onEngagement, { once: true });
+    window.addEventListener("scroll", onEngagement, { once: true, passive: true });
+    engagementTimer = window.setTimeout(onEngagement, ENGAGEMENT_DWELL_MS);
 
     const onBIP = (e: Event) => {
       e.preventDefault();
@@ -64,21 +86,38 @@ export default function InstallPrompt() {
     const onInstalled = () => {
       setBipEvent(null);
       setShowIOSHint(false);
+      // Analytics hook — wire to /api/metrics or Firebase Analytics later.
+      // For now, leave a breadcrumb in console + dataLayer (if GA loaded).
+      try {
+        (window as any).dataLayer?.push?.({ event: "pwa_installed" });
+        console.info("[PWA] Installed on home screen — thanks!");
+      } catch { /* noop */ }
     };
     window.addEventListener("appinstalled", onInstalled);
 
     if (isIOSSafari()) {
-      const timer = window.setTimeout(() => setShowIOSHint(true), 4000);
+      // iOS Safari never fires beforeinstallprompt. We show a manual hint
+      // AFTER engagement (a tap or scroll), but not earlier than 4s — avoids
+      // jumping in front of the user's first action.
+      const iosTimer = window.setTimeout(() => setShowIOSHint(true), 4000);
       return () => {
-        window.clearTimeout(timer);
+        window.clearTimeout(iosTimer);
+        window.clearTimeout(engagementTimer);
         window.removeEventListener("beforeinstallprompt", onBIP);
         window.removeEventListener("appinstalled", onInstalled);
+        window.removeEventListener("pointerdown", onEngagement);
+        window.removeEventListener("keydown", onEngagement);
+        window.removeEventListener("scroll", onEngagement);
       };
     }
 
     return () => {
+      window.clearTimeout(engagementTimer);
       window.removeEventListener("beforeinstallprompt", onBIP);
       window.removeEventListener("appinstalled", onInstalled);
+      window.removeEventListener("pointerdown", onEngagement);
+      window.removeEventListener("keydown", onEngagement);
+      window.removeEventListener("scroll", onEngagement);
     };
   }, []);
 
@@ -98,6 +137,9 @@ export default function InstallPrompt() {
   };
 
   if (dismissed) return null;
+  // Don't render either prompt until the user has interacted — feels less
+  // spammy + improves perceived performance (no extra DOM cost on first paint).
+  if (!engaged) return null;
 
   if (bipEvent) {
     return (

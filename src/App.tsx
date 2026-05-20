@@ -40,6 +40,7 @@ const TeacherLeaderboard   = lazy(() => import("@/pages/TeacherLeaderboard"));
 const OwnerDashboard       = lazy(() => import("@/pages/owner/OwnerDashboard"));
 const ParentPortal         = lazy(() => import("@/pages/ParentPortal"));
 const Help                 = lazy(() => import("@/pages/Help"));
+const PrivacyPolicy        = lazy(() => import("@/pages/PrivacyPolicy"));
 const NotFound             = lazy(() => import("@/pages/NotFound"));
 
 const RouteFallback = () => (
@@ -119,6 +120,9 @@ const App = () => {
           <Routes>
             {/* ── Public routes (no auth needed) ────────────────────── */}
             <Route path="/parent-portal" element={<Suspense fallback={<RouteFallback />}><ParentPortal /></Suspense>} />
+            {/* /privacy MUST stay public — Google Play Store TWA submission
+                requires a publicly reachable privacy policy URL. */}
+            <Route path="/privacy" element={<Suspense fallback={<RouteFallback />}><PrivacyPolicy /></Suspense>} />
 
             {/* ── Auth-gated routes ──────────────────────────────────── */}
             {!user ? (

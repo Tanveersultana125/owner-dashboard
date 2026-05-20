@@ -1,0 +1,57 @@
+{
+  "packageId": "com.edullent.owner",
+  "host": "owner-dashboard-blue.vercel.app",
+  "name": "Edullent — Owner",
+  "launcherName": "Edullent",
+  "display": "standalone",
+  "orientation": "any",
+  "themeColor": "#1e3a8a",
+  "navigationColor": "#1e3a8a",
+  "navigationColorDark": "#001040",
+  "navigationDividerColor": "#1e3a8a",
+  "navigationDividerColorDark": "#001040",
+  "backgroundColor": "#EEF4FF",
+  "enableNotifications": false,
+  "startUrl": "/?source=twa",
+  "iconUrl": "https://owner-dashboard-blue.vercel.app/icons/icon-512x512.png",
+  "maskableIconUrl": "https://owner-dashboard-blue.vercel.app/icons/icon-512-maskable.png",
+  "monochromeIconUrl": null,
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "shortName": "Home",
+      "url": "/?source=shortcut",
+      "iconUrl": "https://owner-dashboard-blue.vercel.app/icons/icon-96x96.png"
+    },
+    {
+      "name": "Branches",
+      "shortName": "Branches",
+      "url": "/branches?source=shortcut",
+      "iconUrl": "https://owner-dashboard-blue.vercel.app/icons/icon-96x96.png"
+    },
+    {
+      "name": "Finance",
+      "shortName": "Finance",
+      "url": "/finance?source=shortcut",
+      "iconUrl": "https://owner-dashboard-blue.vercel.app/icons/icon-96x96.png"
+    }
+  ],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://owner-dashboard-blue.vercel.app/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "features": {
+    "playBilling": {
+      "enabled": false
+    }
+  },
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://owner-dashboard-blue.vercel.app/",
+  "minSdkVersion": 23,
+  "appVersionName": "1.0.0",
+  "appVersion": 1
+}

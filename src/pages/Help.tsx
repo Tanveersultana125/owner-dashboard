@@ -344,7 +344,7 @@ export default function Help() {
         >
           <HelpCircle className="w-5 h-5" />
         </div>
-        <div>
+        <div className="flex-1 min-w-0">
           <h1 className="text-2xl font-semibold" style={{ color: "#0B1F3A" }}>
             Help &amp; Support
           </h1>
@@ -352,6 +352,23 @@ export default function Help() {
             Raise a support ticket. Our team replies within 24 hours on
             weekdays. You can track the conversation below.
           </p>
+          <div className="mt-2 flex items-center gap-3 text-[11px] font-semibold">
+            <a
+              href="/privacy"
+              className="text-[#1e3a8a] hover:text-[#0044CC] hover:underline transition-colors"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Privacy Policy
+            </a>
+            <span className="text-slate-300">·</span>
+            <a
+              href="mailto:edullentofficial@gmail.com"
+              className="text-[#1e3a8a] hover:text-[#0044CC] hover:underline transition-colors"
+            >
+              Contact us
+            </a>
+          </div>
         </div>
       </header>
 

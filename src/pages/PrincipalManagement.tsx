@@ -26,7 +26,7 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { sendInvitationEmail } from "@/lib/resend";
 import { toast } from "sonner";
 import { addAuditLog } from "@/lib/auditService";
-import * as XLSX from 'xlsx';
+// xlsx is lazy-loaded inside the Excel handlers — saves ~600KB on initial load.
 
 // Converts a display name to a consistent slug-based ID
 // "South India" → "south_india", "Hyderabad Campus" → "hyderabad_campus"
@@ -252,7 +252,8 @@ export default function PrincipalManagement() {
   };
 
   /* ── Download Excel template ──────────────────────────────────────── */
-  const handleDownloadTemplate = () => {
+  const handleDownloadTemplate = async () => {
+    const XLSX = await import("xlsx");
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet([
       ["name", "email", "branch"],
@@ -273,6 +274,7 @@ export default function PrincipalManagement() {
     setBulkDone(false);
     if (!file) return;
     try {
+      const XLSX = await import("xlsx");
       const data = await file.arrayBuffer();
       const wb   = XLSX.read(data, { type: "array" });
       const ws   = wb.Sheets[wb.SheetNames[0]];

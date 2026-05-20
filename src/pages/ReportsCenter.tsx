@@ -221,16 +221,23 @@ export default function ReportsCenter() {
       .finally(() => setReportLoading(false));
   }, []);
 
-  // Export handlers
-  const handleExport = useCallback((format: "pdf" | "excel" | "csv" | "email") => {
+  // Export handlers — PDF and Excel are async because they dynamically import
+  // their heavy libs (jspdf / xlsx) only when the user clicks the button.
+  const handleExport = useCallback(async (format: "pdf" | "excel" | "csv" | "email") => {
     if (!reportData || !selectedSlug) return;
     const reg = REPORT_REGISTRY[selectedSlug];
     const payload = buildExportPayload(reportData, reg?.label || "Report");
-    if (format === "pdf") { exportPDF(payload); toast.success("PDF downloaded"); }
-    else if (format === "excel") { exportExcel(payload); toast.success("Excel downloaded"); }
-    else if (format === "csv") { exportCSV(payload); toast.success("CSV downloaded"); }
-    else if (format === "email") {
-      exportEmail(payload).then(r => toast[r.success ? "success" : "error"](r.message));
+    try {
+      if (format === "pdf") { await exportPDF(payload); toast.success("PDF downloaded"); }
+      else if (format === "excel") { await exportExcel(payload); toast.success("Excel downloaded"); }
+      else if (format === "csv") { exportCSV(payload); toast.success("CSV downloaded"); }
+      else if (format === "email") {
+        const r = await exportEmail(payload);
+        toast[r.success ? "success" : "error"](r.message);
+      }
+    } catch (err) {
+      console.error("[ReportsCenter] export failed:", err);
+      toast.error(`Failed to export ${format.toUpperCase()}.`);
     }
   }, [reportData, selectedSlug]);
 

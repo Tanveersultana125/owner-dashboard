@@ -38,8 +38,10 @@ export default defineConfig(({ mode }) => {
           "favicon.ico",
           "favicon-32x32.png",
           "robots.txt",
+          "og-image.png",
+          "offline.html",
+          ".well-known/assetlinks.json",
           "icons/icon.svg",
-          "icons/icon-maskable.svg",
           "icons/apple-touch-icon.png",
           "icons/icon-72x72.png",
           "icons/icon-96x96.png",
@@ -49,17 +51,22 @@ export default defineConfig(({ mode }) => {
           "icons/icon-192x192.png",
           "icons/icon-384x384.png",
           "icons/icon-512x512.png",
+          "icons/icon-192-maskable.png",
+          "icons/icon-512-maskable.png",
+          // iOS splash screens — NOT precached (device-specific, only one
+          // matches; precaching all 12 would waste bandwidth). They get
+          // cached on demand via the runtime images cache rule.
         ],
         manifest: {
           id: "/",
-          name: "edullent-owner",
-          short_name: "edullent-owner",
+          name: "Edullent — Owner",
+          short_name: "Edullent",
           description: "Multi-branch school analytics, finance, academics and operations.",
           theme_color: "#1e3a8a",
           background_color: "#EEF4FF",
           display: "standalone",
           display_override: ["standalone", "minimal-ui"],
-          orientation: "portrait",
+          orientation: "any",
           start_url: "/?source=pwa",
           scope: "/",
           lang: "en",
@@ -67,26 +74,54 @@ export default defineConfig(({ mode }) => {
           categories: ["education", "productivity", "business"],
           prefer_related_applications: false,
           icons: [
-            { src: "icons/icon-72x72.png",    sizes: "72x72",   type: "image/png" },
-            { src: "icons/icon-96x96.png",    sizes: "96x96",   type: "image/png" },
-            { src: "icons/icon-128x128.png",  sizes: "128x128", type: "image/png" },
-            { src: "icons/icon-144x144.png",  sizes: "144x144", type: "image/png" },
-            { src: "icons/icon-152x152.png",  sizes: "152x152", type: "image/png" },
-            { src: "icons/icon-192x192.png",  sizes: "192x192", type: "image/png", purpose: "any" },
-            { src: "icons/icon-384x384.png",  sizes: "384x384", type: "image/png" },
-            { src: "icons/icon-512x512.png",  sizes: "512x512", type: "image/png", purpose: "any" },
-            { src: "icons/icon-maskable.svg", sizes: "512x512", type: "image/svg+xml", purpose: "maskable" },
+            { src: "icons/icon-72x72.png",          sizes: "72x72",   type: "image/png" },
+            { src: "icons/icon-96x96.png",          sizes: "96x96",   type: "image/png" },
+            { src: "icons/icon-128x128.png",        sizes: "128x128", type: "image/png" },
+            { src: "icons/icon-144x144.png",        sizes: "144x144", type: "image/png" },
+            { src: "icons/icon-152x152.png",        sizes: "152x152", type: "image/png" },
+            { src: "icons/icon-192x192.png",        sizes: "192x192", type: "image/png", purpose: "any" },
+            { src: "icons/icon-384x384.png",        sizes: "384x384", type: "image/png" },
+            { src: "icons/icon-512x512.png",        sizes: "512x512", type: "image/png", purpose: "any" },
+            { src: "icons/icon-192-maskable.png",   sizes: "192x192", type: "image/png", purpose: "maskable" },
+            { src: "icons/icon-512-maskable.png",   sizes: "512x512", type: "image/png", purpose: "maskable" },
           ],
           shortcuts: [
             { name: "Dashboard",  short_name: "Home",     description: "Go to overview",          url: "/?source=shortcut",          icons: [{ src: "icons/icon-96x96.png", sizes: "96x96" }] },
             { name: "Branches",   short_name: "Branches", description: "Compare branches",        url: "/branches?source=shortcut",  icons: [{ src: "icons/icon-96x96.png", sizes: "96x96" }] },
             { name: "Finance",    short_name: "Finance",  description: "Fee + revenue",            url: "/finance?source=shortcut",   icons: [{ src: "icons/icon-96x96.png", sizes: "96x96" }] },
           ],
+          // Screenshots — promote on Chrome's rich install prompt + Play Store
+          // PWA listing. Replace placeholder PNGs with real captures before
+          // submission via DevTools Device Mode (see scripts/generate-screenshots.py).
+          screenshots: [
+            { src: "screenshots/desktop-dashboard.png", sizes: "1280x800",  type: "image/png", form_factor: "wide",   label: "Owner Dashboard — Multi-branch overview" },
+            { src: "screenshots/desktop-finance.png",   sizes: "1280x800",  type: "image/png", form_factor: "wide",   label: "Finance — Fee + revenue across branches" },
+            { src: "screenshots/mobile-dashboard.png",  sizes: "750x1334",  type: "image/png", form_factor: "narrow", label: "Mobile dashboard" },
+            { src: "screenshots/mobile-students.png",   sizes: "750x1334",  type: "image/png", form_factor: "narrow", label: "Student intelligence" },
+          ],
         },
         workbox: {
           globPatterns: ["**/*.{js,css,html,svg,png,ico,webp,woff2}"],
+          // Lazy-loaded chunks should NOT be precached — they're imported
+          // on-demand via dynamic import() inside Export handlers. Precaching
+          // them defeats the bundle savings (~1.2MB) we got from lazy-loading.
+          // They still get runtime-cached on first use via StaleWhileRevalidate.
+          globIgnores: [
+            "**/assets/xlsx-*.js",
+            "**/assets/jspdf*.js",
+            "**/assets/html2canvas*.js",
+            "**/assets/index.es-*.js",            // jspdf-autotable's internal entry
+            "**/assets/purify.es-*.js",            // pulled in by jspdf
+            // iOS launch splashes are device-specific. Only ONE matches per
+            // user; precaching all 12 wastes ~430KB. They cache on-demand
+            // via the runtime "images" rule (StaleWhileRevalidate, 30d).
+            "**/splash/*.png",
+          ],
           navigateFallback: "/index.html",
-          navigateFallbackDenylist: [/^\/api\//, /^\/parent-portal/],
+          // When SW can't reach network AND index.html isn't in cache yet,
+          // workbox needs a fallback. The SPA shell handles 99% of navigations;
+          // offline.html only matters on cold-cache offline launches.
+          navigateFallbackDenylist: [/^\/api\//, /^\/parent-portal/, /^\/\.well-known\//, /^\/offline\.html$/],
           cleanupOutdatedCaches: true,
           maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
           runtimeCaching: [

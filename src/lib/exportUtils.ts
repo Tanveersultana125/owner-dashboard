@@ -1,10 +1,11 @@
 /**
  * exportUtils.ts
  * PDF (jsPDF) + Excel (SheetJS) + CSV + Email export for Reports Center.
+ *
+ * Heavy libs (jspdf ~250KB, xlsx ~600KB) are loaded via dynamic import()
+ * inside each handler so they DON'T bloat the initial JS bundle. The user
+ * only pays for them when they actually click an Export button.
  */
-import { jsPDF } from "jspdf";
-import autoTable from "jspdf-autotable";
-import * as XLSX from "xlsx";
 import { logReportDownload } from "./reportsService";
 import { auth } from "./firebase";
 
@@ -20,7 +21,11 @@ type ExportPayload = {
 
 // ── PDF Export ─────────────────────────────────────────────────────────────────
 
-export function exportPDF(payload: ExportPayload): void {
+export async function exportPDF(payload: ExportPayload): Promise<void> {
+  // Lazy-load jspdf + autotable — saves ~250KB from the initial bundle.
+  const { jsPDF } = await import("jspdf");
+  const { default: autoTable } = await import("jspdf-autotable");
+
   const doc = new jsPDF();
 
   // Header
@@ -109,7 +114,10 @@ export function exportPDF(payload: ExportPayload): void {
 
 // ── Excel Export ───────────────────────────────────────────────────────────────
 
-export function exportExcel(payload: ExportPayload): void {
+export async function exportExcel(payload: ExportPayload): Promise<void> {
+  // Lazy-load xlsx — saves ~600KB from the initial bundle.
+  const XLSX = await import("xlsx");
+
   const wb = XLSX.utils.book_new();
 
   // Summary sheet
@@ -139,6 +147,7 @@ export function exportExcel(payload: ExportPayload): void {
 }
 
 // ── CSV Export ─────────────────────────────────────────────────────────────────
+// No heavy deps — kept sync.
 
 export function exportCSV(payload: ExportPayload): void {
   const lines: string[] = [];

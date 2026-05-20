@@ -246,6 +246,15 @@ export default function LoginPage() {
         <p className="text-center text-slate-400 text-xs font-medium">
           Secured by Edullent Cloud Architecture
         </p>
+        <div className="text-center text-[10px] font-semibold mt-2 flex items-center justify-center gap-3">
+          <a href="/privacy" className="text-slate-400 hover:text-[#1e3a8a] hover:underline transition-colors">
+            Privacy Policy
+          </a>
+          <span className="text-slate-300">·</span>
+          <a href="mailto:edullentofficial@gmail.com" className="text-slate-400 hover:text-[#1e3a8a] hover:underline transition-colors">
+            Contact
+          </a>
+        </div>
       </div>
 
       {/* ── Forgot Password Modal ────────────────────────────────────────── */}
